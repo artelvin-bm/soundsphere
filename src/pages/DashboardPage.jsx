@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from "react";
-import { LogOut } from "lucide-react";
 import logo from "../assets/logo.png";
 import { api } from "../services/api";
 import DashboardStats from "../components/DashboardStats";
@@ -9,6 +8,8 @@ import FileUpload from "../components/FileUpload";
 import FileList from "../components/FileList";
 import TaskForm from "../components/TaskForm";
 import TaskList from "../components/TaskList";
+import ConfirmDialog from "../components/ConfirmDialog";
+import { LogOut, Moon, Sun } from "lucide-react";
 
 function DashboardPage({
     currentUser,
@@ -22,6 +23,13 @@ function DashboardPage({
   const [selectedProjectId, setSelectedProjectId] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [projectSearch, setProjectSearch] = useState("");
+  const [confirmDialog, setConfirmDialog] = useState({
+          isOpen: false,
+          title: "",
+          message: "",
+          confirmText: "Delete",
+          onConfirm: null,
+        });
 
   async function loadProjects() {
     try {
@@ -99,12 +107,6 @@ function DashboardPage({
   }
 
   async function deleteProject(projectId) {
-    const confirmed = window.confirm(
-      "Are you sure you want to delete this project? This will also remove its files and tasks."
-    );
-
-    if (!confirmed) return;
-
     try {
       await api.deleteProject(projectId);
 
@@ -122,13 +124,6 @@ function DashboardPage({
 
   async function deleteAudioFile(fileId) {
     if (!selectedProject) return;
-
-    const confirmed = window.confirm(
-      "Delete this audio file? This will remove the file from Azure Blob Storage and its record from Azure SQL."
-    );
-
-    if (!confirmed) return;
-
     try {
       await api.deleteFile(selectedProject.id, fileId);
 
@@ -236,6 +231,26 @@ function DashboardPage({
   const completion =
     totalTasks === 0 ? 0 : Math.round((doneTasks / totalTasks) * 100);
 
+  function openConfirmDialog({ title, message, confirmText, onConfirm }) {
+    setConfirmDialog({
+      isOpen: true,
+      title,
+      message,
+      confirmText,
+      onConfirm,
+    });
+  }
+
+  function closeConfirmDialog() {
+    setConfirmDialog({
+      isOpen: false,
+      title: "",
+      message: "",
+      confirmText: "Delete",
+      onConfirm: null,
+    });
+  }
+
   return (
     <main className="dashboard-page">
       <header className="topbar">
@@ -252,8 +267,14 @@ function DashboardPage({
         </div>
 
         <div className="topbar-actions">
-          <button type="button" className="theme-toggle" onClick={onToggleTheme}>
-            {theme === "light" ? "Dark" : "Light"}
+          <button
+            type="button"
+            className="theme-toggle"
+            onClick={onToggleTheme}
+            aria-label="Toggle color theme"
+          >
+            {theme === "light" ? <Sun size={18} /> : <Moon size={18} />}
+            <span>{theme === "light" ? "Light" : "Dark"}</span>
           </button>
 
           <div className="user-box">
@@ -322,7 +343,15 @@ function DashboardPage({
 
                 <button
                   className="danger-button"
-                  onClick={() => deleteProject(selectedProject.id)}
+                  onClick={() =>
+                    openConfirmDialog({
+                      title: "Delete project?",
+                      message:
+                        "This will permanently delete the project, its tasks, audio file records, and related data.",
+                      confirmText: "Delete Project",
+                      onConfirm: () => deleteProject(selectedProject.id),
+                    })
+                  }
                 >
                   Delete Project
                 </button>
@@ -350,8 +379,16 @@ function DashboardPage({
                   </div>
 
                   <FileList
-                      files={selectedProject.files}
-                      onDeleteFile={deleteAudioFile}
+                    files={selectedProject.files}
+                    onDeleteFile={(fileId) =>
+                      openConfirmDialog({
+                        title: "Delete audio file?",
+                        message:
+                          "This will remove the audio file from Azure Blob Storage and delete its record from Azure SQL.",
+                        confirmText: "Delete Audio",
+                        onConfirm: () => deleteAudioFile(fileId),
+                      })
+                    }
                   />
                 </div>
 
@@ -370,6 +407,21 @@ function DashboardPage({
           )}
         </section>
       </section>
+
+      <ConfirmDialog
+        isOpen={confirmDialog.isOpen}
+        title={confirmDialog.title}
+        message={confirmDialog.message}
+        confirmText={confirmDialog.confirmText}
+        onCancel={closeConfirmDialog}
+        onConfirm={async () => {
+          if (confirmDialog.onConfirm) {
+            await confirmDialog.onConfirm();
+          }
+
+          closeConfirmDialog();
+        }}
+      />
     </main>
   );
 }

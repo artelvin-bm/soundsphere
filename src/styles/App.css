@@ -834,11 +834,48 @@ body {
 .theme-toggle {
   border: 1px solid var(--border);
   border-radius: 999px;
-  padding: 11px 16px;
+  padding: 11px 15px;
   font-weight: 900;
   color: var(--blue);
   background: var(--card);
   box-shadow: var(--shadow);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-width: 106px;
+  transition: transform 0.15s ease, border 0.15s ease, background 0.15s ease;
+}
+
+.theme-toggle:hover {
+  transform: translateY(-1px);
+  border-color: rgba(126, 187, 194, 0.45);
+}
+
+.theme-toggle svg {
+  color: var(--blue);
+}
+
+.theme-toggle span {
+  line-height: 1;
+}
+
+:root[data-theme="dark"] .theme-toggle {
+  color: var(--light-blue);
+  background: rgba(31, 33, 38, 0.9);
+  border-color: rgba(217, 237, 252, 0.16);
+}
+
+:root[data-theme="dark"] .theme-toggle svg {
+  color: var(--coral);
+}
+
+:root[data-theme="light"] .theme-toggle svg {
+  color: var(--blue);
+}
+
+.topbar-actions .theme-toggle {
+  min-width: 96px;
 }
 
 .login-theme-toggle {
@@ -997,4 +1034,92 @@ body {
 :root[data-theme="dark"] .small-danger-button {
   background: rgba(252, 145, 134, 0.16);
   color: #ffb2aa;
+}
+
+/* ===== Custom confirmation dialog ===== */
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: rgba(20, 22, 28, 0.58);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.confirm-dialog {
+  width: min(460px, 100%);
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 28px;
+  box-shadow: 0 28px 80px rgba(0, 0, 0, 0.28);
+  padding: 28px;
+  animation: modalPop 0.18s ease-out;
+}
+
+.confirm-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 18px;
+  background: rgba(252, 145, 134, 0.2);
+  color: #9f2f28;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 900;
+  font-size: 24px;
+  margin-bottom: 18px;
+}
+
+.confirm-dialog h2 {
+  margin: 0;
+  color: var(--blue);
+  font-size: 24px;
+}
+
+.confirm-dialog p {
+  margin: 10px 0 0;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 26px;
+}
+
+@keyframes modalPop {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+:root[data-theme="dark"] .confirm-dialog h2 {
+  color: var(--light-blue);
+}
+
+:root[data-theme="dark"] .confirm-icon {
+  background: rgba(252, 145, 134, 0.16);
+  color: #ffb2aa;
+}
+
+@media (max-width: 640px) {
+  .confirm-actions {
+    flex-direction: column-reverse;
+  }
+
+  .confirm-actions button {
+    width: 100%;
+  }
 }

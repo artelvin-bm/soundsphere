@@ -1,5 +1,6 @@
 import { useState } from "react";
 import logo from "../assets/logo.png";
+import { Moon, Sun } from "lucide-react";
 
 
 function LoginPage({ onLogin, onRegister, message, theme, onToggleTheme }) {
@@ -28,8 +29,14 @@ function LoginPage({ onLogin, onRegister, message, theme, onToggleTheme }) {
 
   return (
     <main className="login-page">
-      <button type="button" className="theme-toggle login-theme-toggle" onClick={onToggleTheme}>
-        {theme === "light" ? "Dark Mode" : "Light Mode"}
+      <button
+        type="button"
+        className="theme-toggle login-theme-toggle"
+        onClick={onToggleTheme}
+        aria-label="Toggle color theme"
+      >
+        {theme === "light" ? <Sun size={18} /> : <Moon size={18} />}
+        <span>{theme === "light" ? "Light" : "Dark"}</span>
       </button>
       <section className="hero-panel">
         <div className="login-logo-wrap">
