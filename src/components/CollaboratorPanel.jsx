@@ -33,39 +33,48 @@ function CollaboratorPanel({
     setSearchResults([]);
   }, [project.id]);
 
-  async function searchUsers(event) {
-    event.preventDefault();
+  useEffect(() => {
+    if (!isOwner) return;
 
-    if (!searchQuery.trim()) {
+    const trimmedQuery = searchQuery.trim();
+
+    if (trimmedQuery.length < 2) {
       setSearchResults([]);
       return;
     }
 
-    try {
-      setIsSearching(true);
-      const users = await api.searchUsers(searchQuery, currentUser.id);
+    const searchDelay = setTimeout(async () => {
+      try {
+        setIsSearching(true);
 
-      const collaboratorIds = collaborators.map((item) => item.userId);
+        const users = await api.searchUsers(trimmedQuery, currentUser.id);
+        const collaboratorIds = collaborators.map((item) => item.userId);
 
-      const filteredUsers = users.filter(
-        (user) =>
-          user.id !== project.ownerId &&
-          !collaboratorIds.includes(user.id)
-      );
+        const filteredUsers = users.filter(
+          (user) =>
+            user.id !== project.ownerId &&
+            !collaboratorIds.includes(user.id)
+        );
 
-      setSearchResults(filteredUsers);
-    } catch (error) {
-      showMessage(error.message);
-    } finally {
-      setIsSearching(false);
-    }
-  }
+        setSearchResults(filteredUsers);
+      } catch (error) {
+        showMessage(error.message);
+      } finally {
+        setIsSearching(false);
+      }
+    }, 350);
+
+    return () => clearTimeout(searchDelay);
+  }, [searchQuery, collaborators, currentUser.id, isOwner, project.ownerId]);
 
   async function addCollaborator(userId) {
     try {
       const addedCollaborator = await api.addCollaborator(project.id, userId);
+
       setCollaborators([...collaborators, addedCollaborator]);
       setSearchResults(searchResults.filter((user) => user.id !== userId));
+      setSearchQuery("");
+
       showMessage("Collaborator added.");
       onCollaboratorsChange?.();
     } catch (error) {
@@ -76,9 +85,11 @@ function CollaboratorPanel({
   async function removeCollaborator(userId) {
     try {
       await api.removeCollaborator(project.id, userId);
+
       setCollaborators(
         collaborators.filter((item) => item.userId !== userId)
       );
+
       showMessage("Collaborator removed.");
       onCollaboratorsChange?.();
     } catch (error) {
@@ -97,53 +108,67 @@ function CollaboratorPanel({
 
       <div className="owner-row">
         <div>
-          <h3>{currentUser.id === project.ownerId ? currentUser.name : "Project Owner"}</h3>
-          <p>Owner</p>
+          <h3>{project.ownerName || currentUser.name}</h3>
+          <p>{project.ownerEmail || currentUser.email} • Owner</p>
         </div>
       </div>
 
       {isOwner ? (
-        <form className="collaborator-search" onSubmit={searchUsers}>
-          <input
-            type="text"
-            placeholder="Search users by name or email..."
-            value={searchQuery}
-            onChange={(event) => setSearchQuery(event.target.value)}
-          />
+        <div className="suggestion-search">
+          <div className="suggestion-input-wrap">
+            <Search size={17} />
 
-          <button type="submit" className="primary-button">
-            <Search size={16} />
-            Search
-          </button>
-        </form>
+            <input
+              type="text"
+              placeholder="Search registered users by name or email..."
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+            />
+          </div>
+
+          {searchQuery.trim().length > 0 && searchQuery.trim().length < 2 && (
+            <p className="suggestion-hint">
+              Type at least 2 characters to search.
+            </p>
+          )}
+
+          {isSearching && (
+            <p className="suggestion-hint">Searching users...</p>
+          )}
+
+          {searchQuery.trim().length >= 2 &&
+            !isSearching &&
+            searchResults.length === 0 && (
+              <p className="suggestion-hint">No matching users found.</p>
+            )}
+
+          {searchResults.length > 0 && (
+            <div className="suggestion-list">
+              {searchResults.map((user) => (
+                <button
+                  type="button"
+                  className="suggestion-item"
+                  key={user.id}
+                  onClick={() => addCollaborator(user.id)}
+                >
+                  <div>
+                    <h3>{user.name}</h3>
+                    <p>{user.email}</p>
+                  </div>
+
+                  <span>
+                    <UserPlus size={16} />
+                    Add
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
       ) : (
         <p className="empty-text">
           Only the project owner can add or remove collaborators.
         </p>
-      )}
-
-      {isSearching && <p className="empty-text">Searching users...</p>}
-
-      {searchResults.length > 0 && (
-        <div className="collaborator-results">
-          {searchResults.map((user) => (
-            <div className="collaborator-row" key={user.id}>
-              <div>
-                <h3>{user.name}</h3>
-                <p>{user.email}</p>
-              </div>
-
-              <button
-                type="button"
-                className="small-edit-button"
-                onClick={() => addCollaborator(user.id)}
-                title="Add collaborator"
-              >
-                <UserPlus size={16} />
-              </button>
-            </div>
-          ))}
-        </div>
       )}
 
       <div className="collaborator-list">

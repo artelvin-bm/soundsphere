@@ -1275,3 +1275,121 @@ select:focus {
   }
 }
 
+/* ===== Search suggestions ===== */
+
+.suggestion-search {
+  position: relative;
+  margin: 16px 0;
+}
+
+.project-suggestion-search {
+  margin-top: 0;
+  margin-bottom: 14px;
+}
+
+.suggestion-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.suggestion-input-wrap svg {
+  position: absolute;
+  left: 14px;
+  color: var(--muted);
+  pointer-events: none;
+}
+
+.suggestion-input-wrap input {
+  padding-left: 42px;
+}
+
+.project-suggestion-search .suggestion-input-wrap input {
+  padding-left: 15px;
+}
+
+.suggestion-hint {
+  margin: 9px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.suggestion-list {
+  margin-top: 10px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  box-shadow: 0 18px 40px rgba(54, 83, 153, 0.12);
+  overflow: hidden;
+}
+
+.project-suggestion-list {
+  margin-bottom: 12px;
+}
+
+.suggestion-item {
+  width: 100%;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  padding: 14px 15px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  text-align: left;
+  border-bottom: 1px solid rgba(54, 83, 153, 0.1);
+}
+
+.suggestion-item:last-child {
+  border-bottom: none;
+}
+
+.suggestion-item:hover {
+  background: rgba(126, 187, 194, 0.13);
+}
+
+.suggestion-item h3 {
+  margin: 0;
+  font-size: 15px;
+  color: var(--text);
+}
+
+.suggestion-item p {
+  margin: 5px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.suggestion-item span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 999px;
+  padding: 7px 10px;
+  background: rgba(126, 187, 194, 0.18);
+  color: #225e66;
+  font-size: 12px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+:root[data-theme="dark"] .suggestion-list {
+  background: rgba(31, 33, 38, 0.96);
+  border-color: rgba(217, 237, 252, 0.14);
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.28);
+}
+
+:root[data-theme="dark"] .suggestion-item {
+  border-bottom-color: rgba(217, 237, 252, 0.09);
+}
+
+:root[data-theme="dark"] .suggestion-item:hover {
+  background: rgba(126, 187, 194, 0.11);
+}
+
+:root[data-theme="dark"] .suggestion-item span {
+  background: rgba(126, 187, 194, 0.16);
+  color: var(--light-blue);
+}
+

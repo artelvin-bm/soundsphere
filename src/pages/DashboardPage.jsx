@@ -452,13 +452,39 @@ function DashboardPage({
           <div className="card">
             <h2>Projects</h2>
 
-            <input
-              className="search-input"
-              type="text"
-              placeholder="Search projects..."
-              value={projectSearch}
-              onChange={(event) => setProjectSearch(event.target.value)}
-            />
+            <div className="suggestion-search project-suggestion-search">
+              <div className="suggestion-input-wrap">
+                <input
+                  type="text"
+                  placeholder="Search projects..."
+                  value={projectSearch}
+                  onChange={(event) => setProjectSearch(event.target.value)}
+                />
+              </div>
+
+              {projectSearch.trim() && filteredProjects.length > 0 && (
+                <div className="suggestion-list project-suggestion-list">
+                  {filteredProjects.slice(0, 5).map((project) => (
+                    <button
+                      type="button"
+                      className="suggestion-item"
+                      key={project.id}
+                      onClick={() => {
+                        setSelectedProjectId(project.id);
+                        setProjectSearch("");
+                      }}
+                    >
+                      <div>
+                        <h3>{project.title}</h3>
+                        <p>{project.description || "No description provided."}</p>
+                      </div>
+
+                      <span>{project.userRole || "Project"}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
 
             <div className="project-list">
               {isLoading && <p className="empty-text">Loading projects...</p>}
