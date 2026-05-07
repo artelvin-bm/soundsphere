@@ -84,7 +84,7 @@ function LoginPage({ onLogin, onRegister, message, theme, onToggleTheme }) {
           </button>
         </form>
 
-        <p className="hint">Demo: demo@soundsphere.test / password123</p>
+        <p className="hint">Demo: art@test.com / password123</p>
 
         <div className="divider" />
 

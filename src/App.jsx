@@ -4,12 +4,18 @@ import LoginPage from "./pages/LoginPage";
 import DashboardPage from "./pages/DashboardPage";
 
 function App() {
-  const [currentUser, setCurrentUser] = useState(null);
+  const [currentUser, setCurrentUser] = useState(() => {
+    const savedUser = localStorage.getItem("soundsphere_current_user");
+    return savedUser ? JSON.parse(savedUser) : null;
+  });
   const [message, setMessage] = useState("");
-  const [theme, setTheme] = useState("light");
+  const [theme, setTheme] = useState(() => {
+    return localStorage.getItem("soundsphere_theme") || "light";
+  });
 
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme);
+    localStorage.setItem("soundsphere_theme", theme);
   }, [theme]);
 
   function toggleTheme() {
@@ -28,7 +34,8 @@ function App() {
     try {
       const user = await api.login(email, password);
       setCurrentUser(user);
-      showMessage("Login successful.");
+      localStorage.setItem("soundsphere_current_user", JSON.stringify(user));
+      showMessage("Login successful.")
     } catch (error) {
       showMessage(error.message);
     }
@@ -38,6 +45,7 @@ function App() {
     try {
       const user = await api.register(name, email, password);
       setCurrentUser(user);
+      localStorage.setItem("soundsphere_current_user", JSON.stringify(user));
       showMessage("Account created successfully.");
     } catch (error) {
       showMessage(error.message);
@@ -45,6 +53,7 @@ function App() {
   }
 
   function handleLogout() {
+    localStorage.removeItem("soundsphere_current_user");
     setCurrentUser(null);
   }
 
