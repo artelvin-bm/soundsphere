@@ -1,16 +1,25 @@
-import { useState } from "react";
-import { hashPassword, loadData, saveData } from "./utils/storage";
+import { useEffect, useState } from "react";
+import { api } from "./services/api";
 import LoginPage from "./pages/LoginPage";
 import DashboardPage from "./pages/DashboardPage";
 
 function App() {
-  const [data, setData] = useState(loadData);
-  const [currentUser, setCurrentUser] = useState(data.users[0]);
+  const [currentUser, setCurrentUser] = useState(() => {
+    const savedUser = localStorage.getItem("soundsphere_current_user");
+    return savedUser ? JSON.parse(savedUser) : null;
+  });
   const [message, setMessage] = useState("");
+  const [theme, setTheme] = useState(() => {
+    return localStorage.getItem("soundsphere_theme") || "light";
+  });
 
-  function updateData(newData) {
-    setData(newData);
-    saveData(newData);
+  useEffect(() => {
+    document.documentElement.setAttribute("data-theme", theme);
+    localStorage.setItem("soundsphere_theme", theme);
+  }, [theme]);
+
+  function toggleTheme() {
+    setTheme((currentTheme) => (currentTheme === "light" ? "dark" : "light"));
   }
 
   function showMessage(text) {
@@ -21,51 +30,30 @@ function App() {
     }, 2500);
   }
 
-  function handleLogin(email, password) {
-    const user = data.users.find(
-      (item) => item.email === email && item.passwordHash === hashPassword(password)
-    );
-
-    if (!user) {
-      showMessage("Invalid email or password.");
-      return;
+  async function handleLogin(email, password) {
+    try {
+      const user = await api.login(email, password);
+      setCurrentUser(user);
+      localStorage.setItem("soundsphere_current_user", JSON.stringify(user));
+      showMessage("Login successful.")
+    } catch (error) {
+      showMessage(error.message);
     }
-
-    setCurrentUser(user);
-    showMessage("Login successful.");
   }
 
-  function handleRegister(name, email, password) {
-    if (!name.trim() || !email.trim() || password.length < 6) {
-      showMessage("Please complete all fields. Password must be at least 6 characters.");
-      return;
+  async function handleRegister(name, email, password) {
+    try {
+      const user = await api.register(name, email, password);
+      setCurrentUser(user);
+      localStorage.setItem("soundsphere_current_user", JSON.stringify(user));
+      showMessage("Account created successfully.");
+    } catch (error) {
+      showMessage(error.message);
     }
-
-    const emailExists = data.users.some((user) => user.email === email);
-
-    if (emailExists) {
-      showMessage("That email is already registered.");
-      return;
-    }
-
-    const newUser = {
-      id: Date.now(),
-      name,
-      email,
-      passwordHash: hashPassword(password),
-    };
-
-    const newData = {
-      ...data,
-      users: [...data.users, newUser],
-    };
-
-    updateData(newData);
-    setCurrentUser(newUser);
-    showMessage("Account created successfully.");
   }
 
   function handleLogout() {
+    localStorage.removeItem("soundsphere_current_user");
     setCurrentUser(null);
   }
 
@@ -75,18 +63,20 @@ function App() {
         onLogin={handleLogin}
         onRegister={handleRegister}
         message={message}
+        theme={theme}
+        onToggleTheme={toggleTheme}
       />
     );
   }
 
   return (
     <DashboardPage
-      data={data}
       currentUser={currentUser}
-      updateData={updateData}
       onLogout={handleLogout}
       message={message}
       showMessage={showMessage}
+      theme={theme}
+      onToggleTheme={toggleTheme}
     />
   );
 }

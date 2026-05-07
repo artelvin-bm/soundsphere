@@ -1,13 +1,16 @@
 import { useState } from "react";
 
-function TaskForm({ onAddTask }) {
+function TaskForm({ onAddTask, assigneeOptions = [] }) {
   const [title, setTitle] = useState("");
   const [assignee, setAssignee] = useState("");
 
   function submitForm(event) {
     event.preventDefault();
 
-    onAddTask(title, assignee);
+    const selectedAssignee =
+      assignee || assigneeOptions[0]?.name || "Unassigned";
+
+    onAddTask(title, selectedAssignee);
 
     setTitle("");
     setAssignee("");
@@ -22,12 +25,18 @@ function TaskForm({ onAddTask }) {
         onChange={(event) => setTitle(event.target.value)}
       />
 
-      <input
-        type="text"
-        placeholder="Assignee"
+      <select
         value={assignee}
         onChange={(event) => setAssignee(event.target.value)}
-      />
+      >
+        <option value="">Assign to...</option>
+
+        {assigneeOptions.map((user) => (
+          <option key={`${user.role}-${user.id}`} value={user.name}>
+            {user.name} — {user.role}
+          </option>
+        ))}
+      </select>
 
       <button type="submit" className="primary-button">
         Add Task

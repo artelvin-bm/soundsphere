@@ -1,5 +1,6 @@
-import { useMemo, useState } from "react";
-import { LogOut, Music } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import logo from "../assets/logo.png";
+import { api } from "../services/api";
 import DashboardStats from "../components/DashboardStats";
 import ProjectForm from "../components/ProjectForm";
 import ProjectCard from "../components/ProjectCard";
@@ -7,208 +8,436 @@ import FileUpload from "../components/FileUpload";
 import FileList from "../components/FileList";
 import TaskForm from "../components/TaskForm";
 import TaskList from "../components/TaskList";
+import ConfirmDialog from "../components/ConfirmDialog";
+import { LogOut, Moon, Sun } from "lucide-react";
+import ProjectEditDialog from "../components/ProjectEditDialog";
+import TaskEditDialog from "../components/TaskEditDialog";
+import CollaboratorPanel from "../components/CollaboratorPanel";
 
 function DashboardPage({
-  data,
-  currentUser,
-  updateData,
-  onLogout,
-  message,
-  showMessage,
-}) {
-  const userProjects = data.projects.filter(
-    (project) => project.ownerId === currentUser.id
-  );
+    currentUser,
+    onLogout,
+    message,
+    showMessage,
+    theme,
+    onToggleTheme,
+  }) {
+  const [projects, setProjects] = useState([]);
+  const [selectedProjectId, setSelectedProjectId] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [projectSearch, setProjectSearch] = useState("");
+  const [confirmDialog, setConfirmDialog] = useState({
+          isOpen: false,
+          title: "",
+          message: "",
+          confirmText: "Delete",
+          onConfirm: null,
+        });
 
-  const [selectedProjectId, setSelectedProjectId] = useState(
-    userProjects[0]?.id || null
-  );
+  const [editingProject, setEditingProject] = useState(null);
+  const [editingTask, setEditingTask] = useState(null);
+  const [projectCollaborators, setProjectCollaborators] = useState([]);
+
+  async function loadProjects() {
+    try {
+      setIsLoading(true);
+      const projectData = await api.getProjects(currentUser.id);
+      setProjects(projectData);
+
+      if (projectData.length > 0 && !selectedProjectId) {
+        setSelectedProjectId(projectData[0].id);
+      }
+    } catch (error) {
+      showMessage(error.message);
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    loadProjects();
+  }, [currentUser.id]);
 
   const selectedProject =
-    userProjects.find((project) => project.id === selectedProjectId) ||
-    userProjects[0];
+    projects.find((project) => project.id === selectedProjectId) || projects[0];
+
+  const filteredProjects = projects.filter((project) =>
+    `${project.title} ${project.description || ""}`
+      .toLowerCase()
+      .includes(projectSearch.toLowerCase())
+  );
+
+  const assigneeOptions = selectedProject
+    ? [
+        {
+          id: selectedProject.ownerId,
+          name: selectedProject.ownerName || currentUser.name,
+          email: selectedProject.ownerEmail || currentUser.email,
+          role: "Owner",
+        },
+        ...projectCollaborators.map((collaborator) => ({
+          id: collaborator.userId,
+          name: collaborator.name,
+          email: collaborator.email,
+          role: collaborator.role,
+        })),
+      ]
+    : [];
 
   const stats = useMemo(() => {
-    const fileCount = userProjects.reduce(
+    const fileCount = projects.reduce(
       (total, project) => total + project.files.length,
       0
     );
 
-    const taskCount = userProjects.reduce(
+    const taskCount = projects.reduce(
       (total, project) => total + project.tasks.length,
       0
     );
 
-    const completedTaskCount = userProjects.reduce(
+    const completedTaskCount = projects.reduce(
       (total, project) =>
         total + project.tasks.filter((task) => task.status === "Done").length,
       0
     );
 
     return {
-      projectCount: userProjects.length,
+      projectCount: projects.length,
       fileCount,
       taskCount,
       completedTaskCount,
     };
-  }, [userProjects]);
+  }, [projects]);
 
-  function createProject(title, description) {
-    if (!title.trim()) {
-      showMessage("Project title is required.");
-      return;
-    }
+  async function createProject(title, description) {
+    try {
+      if (!title.trim()) {
+        showMessage("Project title is required.");
+        return;
+      }
 
-    const newProject = {
-      id: Date.now(),
-      ownerId: currentUser.id,
-      title,
-      description,
-      status: "In Progress",
-      files: [],
-      tasks: [],
-    };
+      const createdProject = await api.createProject(
+        currentUser.id,
+        title,
+        description
+      );
 
-    updateData({
-      ...data,
-      projects: [...data.projects, newProject],
-    });
-
-    setSelectedProjectId(newProject.id);
-    showMessage("Project created.");
-  }
-
-  function deleteProject(projectId) {
-    const remainingProjects = data.projects.filter(
-      (project) => project.id !== projectId
-    );
-
-    updateData({
-      ...data,
-      projects: remainingProjects,
-    });
-
-    setSelectedProjectId(remainingProjects[0]?.id || null);
-    showMessage("Project deleted.");
-  }
-
-  function uploadAudioFile(file) {
-    if (!selectedProject || !file) return;
-
-    const allowedExtensions = [".mp3", ".wav", ".flac"];
-    const hasAllowedExtension = allowedExtensions.some((extension) =>
-      file.name.toLowerCase().endsWith(extension)
-    );
-
-    if (!hasAllowedExtension) {
-      showMessage("Only MP3, WAV, and FLAC files are allowed.");
-      return;
-    }
-
-    const fileRecord = {
-      id: Date.now(),
-      name: file.name,
-      label: `Version ${selectedProject.files.length + 1}`,
-      size: `${(file.size / 1024 / 1024).toFixed(2)} MB`,
-      type: file.type || "audio file",
-      date: new Date().toISOString().slice(0, 10),
-    };
-
-    const updatedProjects = data.projects.map((project) => {
-      if (project.id !== selectedProject.id) return project;
-
-      return {
-        ...project,
-        files: [fileRecord, ...project.files],
+      const newProject = {
+        ...createdProject,
+        ownerName: currentUser.name,
+        ownerEmail: currentUser.email,
+        userRole: "Owner",
       };
-    });
 
-    updateData({
-      ...data,
-      projects: updatedProjects,
-    });
-
-    showMessage("Audio file added.");
-  }
-
-  function addTask(title, assignee) {
-    if (!selectedProject || !title.trim()) {
-      showMessage("Task title is required.");
-      return;
+      setProjects([newProject, ...projects]);
+      setSelectedProjectId(newProject.id);
+      showMessage("Project created.");
+    } catch (error) {
+      showMessage(error.message);
     }
-
-    const newTask = {
-      id: Date.now(),
-      title,
-      assignee: assignee || "Unassigned",
-      status: "To Do",
-    };
-
-    const updatedProjects = data.projects.map((project) => {
-      if (project.id !== selectedProject.id) return project;
-
-      return {
-        ...project,
-        tasks: [...project.tasks, newTask],
-      };
-    });
-
-    updateData({
-      ...data,
-      projects: updatedProjects,
-    });
-
-    showMessage("Task added.");
   }
 
-  function toggleTaskStatus(taskId) {
-    const updatedProjects = data.projects.map((project) => {
-      if (project.id !== selectedProject.id) return project;
+  async function deleteProject(projectId) {
+    try {
+      await api.deleteProject(projectId);
 
-      return {
-        ...project,
-        tasks: project.tasks.map((task) => {
-          if (task.id !== taskId) return task;
+      const remainingProjects = projects.filter(
+        (project) => project.id !== projectId
+      );
 
-          return {
-            ...task,
-            status: task.status === "Done" ? "In Progress" : "Done",
-          };
-        }),
-      };
-    });
+      setProjects(remainingProjects);
+      setSelectedProjectId(remainingProjects[0]?.id || null);
+      showMessage("Project deleted.");
+    } catch (error) {
+      showMessage(error.message);
+    }
+  }
 
-    updateData({
-      ...data,
-      projects: updatedProjects,
-    });
+  async function deleteAudioFile(fileId) {
+    if (!selectedProject) return;
+    try {
+      await api.deleteFile(selectedProject.id, fileId);
+
+      const updatedProjects = projects.map((project) => {
+        if (project.id !== selectedProject.id) return project;
+
+        return {
+          ...project,
+          files: project.files.filter((file) => file.id !== fileId),
+        };
+      });
+
+      setProjects(updatedProjects);
+      showMessage("Audio file deleted.");
+    } catch (error) {
+      showMessage(error.message);
+    }
+  }
+
+  async function uploadAudioFile(file) {
+    try {
+      if (!selectedProject || !file) return;
+
+      const allowedExtensions = [".mp3", ".wav", ".flac"];
+      const hasAllowedExtension = allowedExtensions.some((extension) =>
+        file.name.toLowerCase().endsWith(extension)
+      );
+
+      if (!hasAllowedExtension) {
+        showMessage("Only MP3, WAV, and FLAC files are allowed.");
+        return;
+      }
+
+      const label = `Version ${selectedProject.files.length + 1}`;
+      const savedFile = await api.addFile(selectedProject.id, file, label);
+
+      const updatedProjects = projects.map((project) => {
+        if (project.id !== selectedProject.id) return project;
+
+        return {
+          ...project,
+          files: [savedFile, ...project.files],
+        };
+      });
+
+      setProjects(updatedProjects);
+      showMessage("Audio file record saved to Azure SQL.");
+    } catch (error) {
+      showMessage(error.message);
+    }
+  }
+
+  async function addTask(title, assignee) {
+    try {
+      if (!selectedProject || !title.trim()) {
+        showMessage("Task title is required.");
+        return;
+      }
+
+      const savedTask = await api.addTask(selectedProject.id, title, assignee);
+
+      const updatedProjects = projects.map((project) => {
+        if (project.id !== selectedProject.id) return project;
+
+        return {
+          ...project,
+          tasks: [...project.tasks, savedTask],
+        };
+      });
+
+      setProjects(updatedProjects);
+      showMessage("Task saved to Azure SQL.");
+    } catch (error) {
+      showMessage(error.message);
+    }
+  }
+
+  async function deleteTask(taskId) {
+    if (!selectedProject) return;
+
+    try {
+      await api.deleteTask(selectedProject.id, taskId);
+
+      const updatedProjects = projects.map((project) => {
+        if (project.id !== selectedProject.id) return project;
+
+        return {
+          ...project,
+          tasks: project.tasks.filter((task) => task.id !== taskId),
+        };
+      });
+
+      setProjects(updatedProjects);
+      showMessage("Task deleted.");
+    } catch (error) {
+      const updatedProjects = projects.map((project) => {
+        if (project.id !== selectedProject.id) return project;
+
+        return {
+          ...project,
+          tasks: project.tasks.filter((task) => task.id !== taskId),
+        };
+      });
+
+      setProjects(updatedProjects);
+      showMessage(
+        error.message === "Task not found."
+          ? "Task was already removed. The list has been refreshed."
+          : error.message
+      );
+    }
+  }
+
+  async function toggleTaskStatus(taskId) {
+    try {
+      if (!selectedProject) return;
+
+      const updatedTask = await api.toggleTask(selectedProject.id, taskId);
+
+      const updatedProjects = projects.map((project) => {
+        if (project.id !== selectedProject.id) return project;
+
+        return {
+          ...project,
+          tasks: project.tasks.map((task) =>
+            task.id === taskId ? updatedTask : task
+          ),
+        };
+      });
+
+      setProjects(updatedProjects);
+    } catch (error) {
+      showMessage(error.message);
+    }
   }
 
   const totalTasks = selectedProject?.tasks.length || 0;
   const doneTasks =
     selectedProject?.tasks.filter((task) => task.status === "Done").length || 0;
 
-  const completion = totalTasks === 0 ? 0 : Math.round((doneTasks / totalTasks) * 100);
+  const completion =
+    totalTasks === 0 ? 0 : Math.round((doneTasks / totalTasks) * 100);
 
+  function openConfirmDialog({ title, message, confirmText, onConfirm }) {
+    setConfirmDialog({
+      isOpen: true,
+      title,
+      message,
+      confirmText,
+      onConfirm,
+    });
+  }
+
+  function closeConfirmDialog() {
+    setConfirmDialog({
+      isOpen: false,
+      title: "",
+      message: "",
+      confirmText: "Delete",
+      onConfirm: null,
+    });
+  }
+
+  function startEditingProject() {
+    if (!selectedProject) return;
+    setEditingProject(selectedProject);
+  }
+
+  function closeProjectEditDialog() {
+    setEditingProject(null);
+  }
+
+  async function saveProjectEdits(updatedValues) {
+    if (!selectedProject) return;
+
+    try {
+      const updatedProject = await api.updateProject(
+        selectedProject.id,
+        updatedValues.title,
+        updatedValues.description
+      );
+
+      const updatedProjects = projects.map((project) => {
+        if (project.id !== selectedProject.id) return project;
+
+        return {
+          ...project,
+          ...updatedProject,
+          files: project.files,
+          tasks: project.tasks,
+        };
+      });
+
+      setProjects(updatedProjects);
+      setEditingProject(null);
+      showMessage("Project updated.");
+    } catch (error) {
+      showMessage(error.message);
+    }
+  }
+
+  async function updateTask(taskId, updatedValues) {
+    if (!selectedProject) return;
+
+    try {
+      const updatedTask = await api.updateTask(
+        selectedProject.id,
+        taskId,
+        updatedValues.title,
+        updatedValues.assignee,
+        updatedValues.status
+      );
+
+      const updatedProjects = projects.map((project) => {
+        if (project.id !== selectedProject.id) return project;
+
+        return {
+          ...project,
+          tasks: project.tasks.map((task) =>
+            task.id === taskId ? updatedTask : task
+          ),
+        };
+      });
+
+      setProjects(updatedProjects);
+      setEditingTask(null);
+      showMessage("Task updated.");
+    } catch (error) {
+      showMessage(error.message);
+    }
+  }
+
+  async function loadProjectCollaborators(projectId) {
+    if (!projectId) return;
+
+    try {
+      const collaborators = await api.getCollaborators(projectId);
+      setProjectCollaborators(collaborators);
+    } catch (error) {
+      showMessage(error.message);
+    }
+  }
+
+  useEffect(() => {
+    if (selectedProject?.id) {
+      loadProjectCollaborators(selectedProject.id);
+    } else {
+      setProjectCollaborators([]);
+    }
+  }, [selectedProject?.id]);
+  
   return (
     <main className="dashboard-page">
       <header className="topbar">
         <div className="brand">
-          <div className="brand-icon">
-            <Music size={28} />
+          <div className="brand-logo-box">
+            <img src={logo} alt="SoundSphere logo" className="brand-logo" />
           </div>
 
           <div>
             <h1>SoundSphere</h1>
-            <p>Music Collaboration & Production Management System</p>
+            <p>Azure SQL-powered music collaboration prototype</p>
+            <div className="connection-badge">Azure SQL Connected</div>
           </div>
         </div>
 
-        <div className="user-box">
-          <span>{currentUser.name}</span>
-          <button onClick={onLogout} className="icon-button">
-            <LogOut size={18} />
+        <div className="topbar-actions">
+          <button
+            type="button"
+            className="theme-toggle"
+            onClick={onToggleTheme}
+            aria-label="Toggle color theme"
+          >
+            {theme === "light" ? <Sun size={18} /> : <Moon size={18} />}
+            <span>{theme === "light" ? "Light" : "Dark"}</span>
           </button>
+
+          <div className="user-box">
+            <span>{currentUser.name}</span>
+            <button onClick={onLogout} className="icon-button">
+              <LogOut size={18} />
+            </button>
+          </div>
         </div>
       </header>
 
@@ -223,12 +452,52 @@ function DashboardPage({
           <div className="card">
             <h2>Projects</h2>
 
+            <div className="suggestion-search project-suggestion-search">
+              <div className="suggestion-input-wrap">
+                <input
+                  type="text"
+                  placeholder="Search projects..."
+                  value={projectSearch}
+                  onChange={(event) => setProjectSearch(event.target.value)}
+                />
+              </div>
+
+              {projectSearch.trim() && filteredProjects.length > 0 && (
+                <div className="suggestion-list project-suggestion-list">
+                  {filteredProjects.slice(0, 5).map((project) => (
+                    <button
+                      type="button"
+                      className="suggestion-item"
+                      key={project.id}
+                      onClick={() => {
+                        setSelectedProjectId(project.id);
+                        setProjectSearch("");
+                      }}
+                    >
+                      <div>
+                        <h3>{project.title}</h3>
+                        <p>{project.description || "No description provided."}</p>
+                      </div>
+
+                      <span>{project.userRole || "Project"}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
             <div className="project-list">
-              {userProjects.length === 0 && (
+              {isLoading && <p className="empty-text">Loading projects...</p>}
+
+              {!isLoading && projects.length === 0 && (
                 <p className="empty-text">No projects yet.</p>
               )}
 
-              {userProjects.map((project) => (
+              {!isLoading && projects.length > 0 && filteredProjects.length === 0 && (
+                <p className="empty-text">No projects match your search.</p>
+              )}
+
+              {filteredProjects.map((project) => (
                 <ProjectCard
                   key={project.id}
                   project={project}
@@ -242,24 +511,40 @@ function DashboardPage({
 
         <section className="workspace">
           {!selectedProject ? (
-            <div className="empty-workspace">
-              Create a project to begin.
-            </div>
+            <div className="empty-workspace">Create a project to begin.</div>
           ) : (
             <>
               <div className="workspace-header">
-                <div>
-                  <h2>{selectedProject.title}</h2>
-                  <p>{selectedProject.description || "No description provided."}</p>
-                </div>
+              <div>
+                <h2>{selectedProject.title}</h2>
+                <p>{selectedProject.description || "No description provided."}</p>
+              </div>
+
+              <div className="inline-actions">
+                <button
+                  type="button"
+                  className="secondary-button"
+                  onClick={startEditingProject}
+                >
+                  Edit Project
+                </button>
 
                 <button
                   className="danger-button"
-                  onClick={() => deleteProject(selectedProject.id)}
+                  onClick={() =>
+                    openConfirmDialog({
+                      title: "Delete project?",
+                      message:
+                        "This will permanently delete the project, its tasks, audio file records, and related data.",
+                      confirmText: "Delete Project",
+                      onConfirm: () => deleteProject(selectedProject.id),
+                    })
+                  }
                 >
                   Delete Project
                 </button>
               </div>
+            </div>
 
               <div className="progress-card">
                 <div className="progress-header">
@@ -282,24 +567,87 @@ function DashboardPage({
                     <FileUpload onUpload={uploadAudioFile} />
                   </div>
 
-                  <FileList files={selectedProject.files} />
+                  <FileList
+                    files={selectedProject.files}
+                    onDeleteFile={(fileId) =>
+                      openConfirmDialog({
+                        title: "Delete audio file?",
+                        message:
+                          "This will remove the audio file from Azure Blob Storage and delete its record from Azure SQL.",
+                        confirmText: "Delete Audio",
+                        onConfirm: () => deleteAudioFile(fileId),
+                      })
+                    }
+                  />
                 </div>
 
                 <div className="card">
                   <h2>Tasks</h2>
 
-                  <TaskForm onAddTask={addTask} />
+                  <TaskForm
+                    onAddTask={addTask}
+                    assigneeOptions={assigneeOptions}
+                  />
 
                   <TaskList
                     tasks={selectedProject.tasks}
                     onToggleTask={toggleTaskStatus}
+                    onEditTask={(task) => setEditingTask(task)}
+                    onDeleteTask={(taskId) =>
+                      openConfirmDialog({
+                        title: "Delete task?",
+                        message:
+                          "This will permanently delete this task from the project and remove its record from Azure SQL.",
+                        confirmText: "Delete Task",
+                        onConfirm: () => deleteTask(taskId),
+                      })
+                    }
                   />
                 </div>
+              </div>
+              <div className="collaboration-section">
+                <CollaboratorPanel
+                  project={selectedProject}
+                  currentUser={currentUser}
+                  showMessage={showMessage}
+                  openConfirmDialog={openConfirmDialog}
+                  onCollaboratorsChange={() => loadProjectCollaborators(selectedProject.id)}
+                />
               </div>
             </>
           )}
         </section>
       </section>
+
+      <ConfirmDialog
+        isOpen={confirmDialog.isOpen}
+        title={confirmDialog.title}
+        message={confirmDialog.message}
+        confirmText={confirmDialog.confirmText}
+        onCancel={closeConfirmDialog}
+        onConfirm={async () => {
+          if (confirmDialog.onConfirm) {
+            await confirmDialog.onConfirm();
+          }
+
+          closeConfirmDialog();
+        }}
+      />
+
+      <ProjectEditDialog
+        isOpen={Boolean(editingProject)}
+        project={editingProject}
+        onCancel={closeProjectEditDialog}
+        onSave={saveProjectEdits}
+      />
+
+      <TaskEditDialog
+        isOpen={Boolean(editingTask)}
+        task={editingTask}
+        assigneeOptions={assigneeOptions}
+        onCancel={() => setEditingTask(null)}
+        onSave={(updatedValues) => updateTask(editingTask.id, updatedValues)}
+      />
     </main>
   );
 }
