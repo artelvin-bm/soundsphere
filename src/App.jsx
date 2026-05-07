@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { api } from "./services/api";
 import LoginPage from "./pages/LoginPage";
 import DashboardPage from "./pages/DashboardPage";
@@ -6,6 +6,15 @@ import DashboardPage from "./pages/DashboardPage";
 function App() {
   const [currentUser, setCurrentUser] = useState(null);
   const [message, setMessage] = useState("");
+  const [theme, setTheme] = useState("light");
+
+  useEffect(() => {
+    document.documentElement.setAttribute("data-theme", theme);
+  }, [theme]);
+
+  function toggleTheme() {
+    setTheme((currentTheme) => (currentTheme === "light" ? "dark" : "light"));
+  }
 
   function showMessage(text) {
     setMessage(text);
@@ -45,6 +54,8 @@ function App() {
         onLogin={handleLogin}
         onRegister={handleRegister}
         message={message}
+        theme={theme}
+        onToggleTheme={toggleTheme}
       />
     );
   }
@@ -55,6 +66,8 @@ function App() {
       onLogout={handleLogout}
       message={message}
       showMessage={showMessage}
+      theme={theme}
+      onToggleTheme={toggleTheme}
     />
   );
 }

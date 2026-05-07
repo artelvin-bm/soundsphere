@@ -1,10 +1,11 @@
 import { useState } from "react";
-import { Music } from "lucide-react";
+import logo from "../assets/logo.png";
 
-function LoginPage({ onLogin, onRegister, message }) {
+
+function LoginPage({ onLogin, onRegister, message, theme, onToggleTheme }) {
   const [form, setForm] = useState({
     name: "",
-    email: "demo@soundsphere.test",
+    email: "art@test.com",
     password: "password123",
   });
 
@@ -27,15 +28,19 @@ function LoginPage({ onLogin, onRegister, message }) {
 
   return (
     <main className="login-page">
+      <button type="button" className="theme-toggle login-theme-toggle" onClick={onToggleTheme}>
+        {theme === "light" ? "Dark Mode" : "Light Mode"}
+      </button>
       <section className="hero-panel">
-        <div className="logo-box">
-          <Music size={38} />
+        <div className="login-logo-wrap">
+          <img src={logo} alt="SoundSphere logo" className="login-logo" />
         </div>
 
-        <h1>SoundSphere</h1>
+<h1>SoundSphere</h1>
+
         <p>
-          A web-based music collaboration and production management prototype
-          for managing projects, audio files, and production tasks.
+          Manage music projects, organize audio file versions, assign production tasks,
+          and track collaboration progress in one workspace.
         </p>
 
         <div className="quality-box">

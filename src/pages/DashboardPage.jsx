@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { LogOut, Music } from "lucide-react";
+import { LogOut } from "lucide-react";
+import logo from "../assets/logo.png";
 import { api } from "../services/api";
 import DashboardStats from "../components/DashboardStats";
 import ProjectForm from "../components/ProjectForm";
@@ -9,10 +10,18 @@ import FileList from "../components/FileList";
 import TaskForm from "../components/TaskForm";
 import TaskList from "../components/TaskList";
 
-function DashboardPage({ currentUser, onLogout, message, showMessage }) {
+function DashboardPage({
+    currentUser,
+    onLogout,
+    message,
+    showMessage,
+    theme,
+    onToggleTheme,
+  }) {
   const [projects, setProjects] = useState([]);
   const [selectedProjectId, setSelectedProjectId] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [projectSearch, setProjectSearch] = useState("");
 
   async function loadProjects() {
     try {
@@ -36,6 +45,12 @@ function DashboardPage({ currentUser, onLogout, message, showMessage }) {
 
   const selectedProject =
     projects.find((project) => project.id === selectedProjectId) || projects[0];
+
+  const filteredProjects = projects.filter((project) =>
+    `${project.title} ${project.description || ""}`
+      .toLowerCase()
+      .includes(projectSearch.toLowerCase())
+  );
 
   const stats = useMemo(() => {
     const fileCount = projects.reduce(
@@ -84,6 +99,12 @@ function DashboardPage({ currentUser, onLogout, message, showMessage }) {
   }
 
   async function deleteProject(projectId) {
+    const confirmed = window.confirm(
+      "Are you sure you want to delete this project? This will also remove its files and tasks."
+    );
+
+    if (!confirmed) return;
+
     try {
       await api.deleteProject(projectId);
 
@@ -197,21 +218,28 @@ function DashboardPage({ currentUser, onLogout, message, showMessage }) {
     <main className="dashboard-page">
       <header className="topbar">
         <div className="brand">
-          <div className="brand-icon">
-            <Music size={28} />
+          <div className="brand-logo-box">
+            <img src={logo} alt="SoundSphere logo" className="brand-logo" />
           </div>
 
           <div>
             <h1>SoundSphere</h1>
             <p>Azure SQL-powered music collaboration prototype</p>
+            <div className="connection-badge">Azure SQL Connected</div>
           </div>
         </div>
 
-        <div className="user-box">
-          <span>{currentUser.name}</span>
-          <button onClick={onLogout} className="icon-button">
-            <LogOut size={18} />
+        <div className="topbar-actions">
+          <button type="button" className="theme-toggle" onClick={onToggleTheme}>
+            {theme === "light" ? "Dark" : "Light"}
           </button>
+
+          <div className="user-box">
+            <span>{currentUser.name}</span>
+            <button onClick={onLogout} className="icon-button">
+              <LogOut size={18} />
+            </button>
+          </div>
         </div>
       </header>
 
@@ -226,6 +254,14 @@ function DashboardPage({ currentUser, onLogout, message, showMessage }) {
           <div className="card">
             <h2>Projects</h2>
 
+            <input
+              className="search-input"
+              type="text"
+              placeholder="Search projects..."
+              value={projectSearch}
+              onChange={(event) => setProjectSearch(event.target.value)}
+            />
+
             <div className="project-list">
               {isLoading && <p className="empty-text">Loading projects...</p>}
 
@@ -233,7 +269,11 @@ function DashboardPage({ currentUser, onLogout, message, showMessage }) {
                 <p className="empty-text">No projects yet.</p>
               )}
 
-              {projects.map((project) => (
+              {!isLoading && projects.length > 0 && filteredProjects.length === 0 && (
+                <p className="empty-text">No projects match your search.</p>
+              )}
+
+              {filteredProjects.map((project) => (
                 <ProjectCard
                   key={project.id}
                   project={project}
