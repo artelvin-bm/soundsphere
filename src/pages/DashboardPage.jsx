@@ -1,5 +1,6 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { LogOut, Music } from "lucide-react";
+import { api } from "../services/api";
 import DashboardStats from "../components/DashboardStats";
 import ProjectForm from "../components/ProjectForm";
 import ProjectCard from "../components/ProjectCard";
@@ -8,187 +9,189 @@ import FileList from "../components/FileList";
 import TaskForm from "../components/TaskForm";
 import TaskList from "../components/TaskList";
 
-function DashboardPage({
-  data,
-  currentUser,
-  updateData,
-  onLogout,
-  message,
-  showMessage,
-}) {
-  const userProjects = data.projects.filter(
-    (project) => project.ownerId === currentUser.id
-  );
+function DashboardPage({ currentUser, onLogout, message, showMessage }) {
+  const [projects, setProjects] = useState([]);
+  const [selectedProjectId, setSelectedProjectId] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const [selectedProjectId, setSelectedProjectId] = useState(
-    userProjects[0]?.id || null
-  );
+  async function loadProjects() {
+    try {
+      setIsLoading(true);
+      const projectData = await api.getProjects(currentUser.id);
+      setProjects(projectData);
+
+      if (projectData.length > 0 && !selectedProjectId) {
+        setSelectedProjectId(projectData[0].id);
+      }
+    } catch (error) {
+      showMessage(error.message);
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    loadProjects();
+  }, [currentUser.id]);
 
   const selectedProject =
-    userProjects.find((project) => project.id === selectedProjectId) ||
-    userProjects[0];
+    projects.find((project) => project.id === selectedProjectId) || projects[0];
 
   const stats = useMemo(() => {
-    const fileCount = userProjects.reduce(
+    const fileCount = projects.reduce(
       (total, project) => total + project.files.length,
       0
     );
 
-    const taskCount = userProjects.reduce(
+    const taskCount = projects.reduce(
       (total, project) => total + project.tasks.length,
       0
     );
 
-    const completedTaskCount = userProjects.reduce(
+    const completedTaskCount = projects.reduce(
       (total, project) =>
         total + project.tasks.filter((task) => task.status === "Done").length,
       0
     );
 
     return {
-      projectCount: userProjects.length,
+      projectCount: projects.length,
       fileCount,
       taskCount,
       completedTaskCount,
     };
-  }, [userProjects]);
+  }, [projects]);
 
-  function createProject(title, description) {
-    if (!title.trim()) {
-      showMessage("Project title is required.");
-      return;
+  async function createProject(title, description) {
+    try {
+      if (!title.trim()) {
+        showMessage("Project title is required.");
+        return;
+      }
+
+      const newProject = await api.createProject(
+        currentUser.id,
+        title,
+        description
+      );
+
+      setProjects([newProject, ...projects]);
+      setSelectedProjectId(newProject.id);
+      showMessage("Project created.");
+    } catch (error) {
+      showMessage(error.message);
     }
-
-    const newProject = {
-      id: Date.now(),
-      ownerId: currentUser.id,
-      title,
-      description,
-      status: "In Progress",
-      files: [],
-      tasks: [],
-    };
-
-    updateData({
-      ...data,
-      projects: [...data.projects, newProject],
-    });
-
-    setSelectedProjectId(newProject.id);
-    showMessage("Project created.");
   }
 
-  function deleteProject(projectId) {
-    const remainingProjects = data.projects.filter(
-      (project) => project.id !== projectId
-    );
+  async function deleteProject(projectId) {
+    try {
+      await api.deleteProject(projectId);
 
-    updateData({
-      ...data,
-      projects: remainingProjects,
-    });
+      const remainingProjects = projects.filter(
+        (project) => project.id !== projectId
+      );
 
-    setSelectedProjectId(remainingProjects[0]?.id || null);
-    showMessage("Project deleted.");
-  }
-
-  function uploadAudioFile(file) {
-    if (!selectedProject || !file) return;
-
-    const allowedExtensions = [".mp3", ".wav", ".flac"];
-    const hasAllowedExtension = allowedExtensions.some((extension) =>
-      file.name.toLowerCase().endsWith(extension)
-    );
-
-    if (!hasAllowedExtension) {
-      showMessage("Only MP3, WAV, and FLAC files are allowed.");
-      return;
+      setProjects(remainingProjects);
+      setSelectedProjectId(remainingProjects[0]?.id || null);
+      showMessage("Project deleted.");
+    } catch (error) {
+      showMessage(error.message);
     }
-
-    const fileRecord = {
-      id: Date.now(),
-      name: file.name,
-      label: `Version ${selectedProject.files.length + 1}`,
-      size: `${(file.size / 1024 / 1024).toFixed(2)} MB`,
-      type: file.type || "audio file",
-      date: new Date().toISOString().slice(0, 10),
-    };
-
-    const updatedProjects = data.projects.map((project) => {
-      if (project.id !== selectedProject.id) return project;
-
-      return {
-        ...project,
-        files: [fileRecord, ...project.files],
-      };
-    });
-
-    updateData({
-      ...data,
-      projects: updatedProjects,
-    });
-
-    showMessage("Audio file added.");
   }
 
-  function addTask(title, assignee) {
-    if (!selectedProject || !title.trim()) {
-      showMessage("Task title is required.");
-      return;
+  async function uploadAudioFile(file) {
+    try {
+      if (!selectedProject || !file) return;
+
+      const allowedExtensions = [".mp3", ".wav", ".flac"];
+      const hasAllowedExtension = allowedExtensions.some((extension) =>
+        file.name.toLowerCase().endsWith(extension)
+      );
+
+      if (!hasAllowedExtension) {
+        showMessage("Only MP3, WAV, and FLAC files are allowed.");
+        return;
+      }
+
+      const fileRecord = {
+        name: file.name,
+        label: `Version ${selectedProject.files.length + 1}`,
+        size: `${(file.size / 1024 / 1024).toFixed(2)} MB`,
+        type: file.type || "audio file",
+      };
+
+      const savedFile = await api.addFile(selectedProject.id, fileRecord);
+
+      const updatedProjects = projects.map((project) => {
+        if (project.id !== selectedProject.id) return project;
+
+        return {
+          ...project,
+          files: [savedFile, ...project.files],
+        };
+      });
+
+      setProjects(updatedProjects);
+      showMessage("Audio file record saved to Azure SQL.");
+    } catch (error) {
+      showMessage(error.message);
     }
-
-    const newTask = {
-      id: Date.now(),
-      title,
-      assignee: assignee || "Unassigned",
-      status: "To Do",
-    };
-
-    const updatedProjects = data.projects.map((project) => {
-      if (project.id !== selectedProject.id) return project;
-
-      return {
-        ...project,
-        tasks: [...project.tasks, newTask],
-      };
-    });
-
-    updateData({
-      ...data,
-      projects: updatedProjects,
-    });
-
-    showMessage("Task added.");
   }
 
-  function toggleTaskStatus(taskId) {
-    const updatedProjects = data.projects.map((project) => {
-      if (project.id !== selectedProject.id) return project;
+  async function addTask(title, assignee) {
+    try {
+      if (!selectedProject || !title.trim()) {
+        showMessage("Task title is required.");
+        return;
+      }
 
-      return {
-        ...project,
-        tasks: project.tasks.map((task) => {
-          if (task.id !== taskId) return task;
+      const savedTask = await api.addTask(selectedProject.id, title, assignee);
 
-          return {
-            ...task,
-            status: task.status === "Done" ? "In Progress" : "Done",
-          };
-        }),
-      };
-    });
+      const updatedProjects = projects.map((project) => {
+        if (project.id !== selectedProject.id) return project;
 
-    updateData({
-      ...data,
-      projects: updatedProjects,
-    });
+        return {
+          ...project,
+          tasks: [...project.tasks, savedTask],
+        };
+      });
+
+      setProjects(updatedProjects);
+      showMessage("Task saved to Azure SQL.");
+    } catch (error) {
+      showMessage(error.message);
+    }
+  }
+
+  async function toggleTaskStatus(taskId) {
+    try {
+      if (!selectedProject) return;
+
+      const updatedTask = await api.toggleTask(selectedProject.id, taskId);
+
+      const updatedProjects = projects.map((project) => {
+        if (project.id !== selectedProject.id) return project;
+
+        return {
+          ...project,
+          tasks: project.tasks.map((task) =>
+            task.id === taskId ? updatedTask : task
+          ),
+        };
+      });
+
+      setProjects(updatedProjects);
+    } catch (error) {
+      showMessage(error.message);
+    }
   }
 
   const totalTasks = selectedProject?.tasks.length || 0;
   const doneTasks =
     selectedProject?.tasks.filter((task) => task.status === "Done").length || 0;
 
-  const completion = totalTasks === 0 ? 0 : Math.round((doneTasks / totalTasks) * 100);
+  const completion =
+    totalTasks === 0 ? 0 : Math.round((doneTasks / totalTasks) * 100);
 
   return (
     <main className="dashboard-page">
@@ -200,7 +203,7 @@ function DashboardPage({
 
           <div>
             <h1>SoundSphere</h1>
-            <p>Music Collaboration & Production Management System</p>
+            <p>Azure SQL-powered music collaboration prototype</p>
           </div>
         </div>
 
@@ -224,11 +227,13 @@ function DashboardPage({
             <h2>Projects</h2>
 
             <div className="project-list">
-              {userProjects.length === 0 && (
+              {isLoading && <p className="empty-text">Loading projects...</p>}
+
+              {!isLoading && projects.length === 0 && (
                 <p className="empty-text">No projects yet.</p>
               )}
 
-              {userProjects.map((project) => (
+              {projects.map((project) => (
                 <ProjectCard
                   key={project.id}
                   project={project}
@@ -242,15 +247,15 @@ function DashboardPage({
 
         <section className="workspace">
           {!selectedProject ? (
-            <div className="empty-workspace">
-              Create a project to begin.
-            </div>
+            <div className="empty-workspace">Create a project to begin.</div>
           ) : (
             <>
               <div className="workspace-header">
                 <div>
                   <h2>{selectedProject.title}</h2>
-                  <p>{selectedProject.description || "No description provided."}</p>
+                  <p>
+                    {selectedProject.description || "No description provided."}
+                  </p>
                 </div>
 
                 <button
