@@ -11,6 +11,13 @@ import {
 } from "./blobStorage.js";
 
 const app = express();
+app.get("/", (req, res) => {
+  res.json({
+    name: "SoundSphere API",
+    status: "running",
+    healthCheck: "/api/health",
+  });
+});
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -21,6 +28,7 @@ const upload = multer({
 
 app.use(cors());
 app.use(express.json());
+
 
 app.get("/api/health", async (req, res) => {
   try {
