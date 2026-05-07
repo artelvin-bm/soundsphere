@@ -229,6 +229,53 @@ app.post("/api/projects", async (req, res) => {
   }
 });
 
+app.put("/api/projects/:id", async (req, res) => {
+  try {
+    const projectId = Number(req.params.id);
+    const { title, description } = req.body;
+
+    if (!title) {
+      return res.status(400).json({
+        message: "Project title is required.",
+      });
+    }
+
+    const pool = await getPool();
+
+    const result = await pool
+      .request()
+      .input("projectId", sql.Int, projectId)
+      .input("title", sql.NVarChar, title)
+      .input("description", sql.NVarChar, description || "")
+      .query(`
+        UPDATE Projects
+        SET title = @title,
+            description = @description
+        OUTPUT 
+          INSERTED.id,
+          INSERTED.owner_id AS ownerId,
+          INSERTED.title,
+          INSERTED.description,
+          INSERTED.status
+        WHERE id = @projectId
+      `);
+
+    const updatedProject = result.recordset[0];
+
+    if (!updatedProject) {
+      return res.status(404).json({
+        message: "Project not found.",
+      });
+    }
+
+    res.json(updatedProject);
+  } catch (error) {
+    res.status(500).json({
+      message: error.message,
+    });
+  }
+});
+
 app.delete("/api/projects/:id", async (req, res) => {
   try {
     const projectId = Number(req.params.id);
@@ -430,6 +477,89 @@ app.post("/api/projects/:id/tasks", async (req, res) => {
       `);
 
     res.status(201).json(result.recordset[0]);
+  } catch (error) {
+    res.status(500).json({
+      message: error.message,
+    });
+  }
+});
+
+app.delete("/api/projects/:projectId/tasks/:taskId", async (req, res) => {
+  try {
+    const taskId = Number(req.params.taskId);
+    const pool = await getPool();
+
+    const result = await pool
+      .request()
+      .input("taskId", sql.Int, taskId)
+      .query(`
+        DELETE FROM Tasks
+        OUTPUT DELETED.id
+        WHERE id = @taskId
+      `);
+
+    if (result.recordset.length === 0) {
+      return res.status(404).json({
+        message: "Task not found.",
+      });
+    }
+
+    res.json({
+      message: "Task deleted.",
+      id: taskId,
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: error.message,
+    });
+  }
+});
+
+app.put("/api/projects/:projectId/tasks/:taskId", async (req, res) => {
+  try {
+    const taskId = Number(req.params.taskId);
+    const { title, assignee, status } = req.body;
+
+    if (!title) {
+      return res.status(400).json({
+        message: "Task title is required.",
+      });
+    }
+
+    const allowedStatuses = ["To Do", "In Progress", "Done"];
+
+    if (!allowedStatuses.includes(status)) {
+      return res.status(400).json({
+        message: "Invalid task status.",
+      });
+    }
+
+    const pool = await getPool();
+
+    const result = await pool
+      .request()
+      .input("taskId", sql.Int, taskId)
+      .input("title", sql.NVarChar, title)
+      .input("assignee", sql.NVarChar, assignee || "Unassigned")
+      .input("status", sql.NVarChar, status)
+      .query(`
+        UPDATE Tasks
+        SET title = @title,
+            assignee = @assignee,
+            status = @status
+        OUTPUT INSERTED.id, INSERTED.title, INSERTED.assignee, INSERTED.status
+        WHERE id = @taskId
+      `);
+
+    const updatedTask = result.recordset[0];
+
+    if (!updatedTask) {
+      return res.status(404).json({
+        message: "Task not found.",
+      });
+    }
+
+    res.json(updatedTask);
   } catch (error) {
     res.status(500).json({
       message: error.message,

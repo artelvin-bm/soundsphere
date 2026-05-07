@@ -1,30 +1,45 @@
 import { useState } from "react";
-import logo from "../assets/logo.png";
 import { Moon, Sun } from "lucide-react";
-
+import logo from "../assets/logo.png";
 
 function LoginPage({ onLogin, onRegister, message, theme, onToggleTheme }) {
-  const [form, setForm] = useState({
-    name: "",
-    email: "art@test.com",
-    password: "password123",
+  const [loginForm, setLoginForm] = useState({
+    email: "",
+    password: "",
   });
 
-  function updateField(field, value) {
-    setForm({
-      ...form,
+  const [registerForm, setRegisterForm] = useState({
+    name: "",
+    email: "",
+    password: "",
+  });
+
+  function updateLoginField(field, value) {
+    setLoginForm({
+      ...loginForm,
+      [field]: value,
+    });
+  }
+
+  function updateRegisterField(field, value) {
+    setRegisterForm({
+      ...registerForm,
       [field]: value,
     });
   }
 
   function submitLogin(event) {
     event.preventDefault();
-    onLogin(form.email, form.password);
+    onLogin(loginForm.email, loginForm.password);
   }
 
   function submitRegister(event) {
     event.preventDefault();
-    onRegister(form.name, form.email, form.password);
+    onRegister(
+      registerForm.name,
+      registerForm.email,
+      registerForm.password
+    );
   }
 
   return (
@@ -38,16 +53,16 @@ function LoginPage({ onLogin, onRegister, message, theme, onToggleTheme }) {
         {theme === "light" ? <Sun size={18} /> : <Moon size={18} />}
         <span>{theme === "light" ? "Light" : "Dark"}</span>
       </button>
+
       <section className="hero-panel">
         <div className="login-logo-wrap">
           <img src={logo} alt="SoundSphere logo" className="login-logo" />
         </div>
 
-<h1>SoundSphere</h1>
-
+        <h1>SoundSphere</h1>
         <p>
-          Manage music projects, organize audio file versions, assign production tasks,
-          and track collaboration progress in one workspace.
+          Manage music projects, organize audio file versions, assign production
+          tasks, and track collaboration progress in one workspace.
         </p>
 
         <div className="quality-box">
@@ -68,15 +83,19 @@ function LoginPage({ onLogin, onRegister, message, theme, onToggleTheme }) {
           <label>Email</label>
           <input
             type="email"
-            value={form.email}
-            onChange={(event) => updateField("email", event.target.value)}
+            value={loginForm.email}
+            onChange={(event) =>
+              updateLoginField("email", event.target.value)
+            }
           />
 
           <label>Password</label>
           <input
             type="password"
-            value={form.password}
-            onChange={(event) => updateField("password", event.target.value)}
+            value={loginForm.password}
+            onChange={(event) =>
+              updateLoginField("password", event.target.value)
+            }
           />
 
           <button type="submit" className="primary-button">
@@ -84,7 +103,7 @@ function LoginPage({ onLogin, onRegister, message, theme, onToggleTheme }) {
           </button>
         </form>
 
-        <p className="hint">Demo: art@test.com / password123</p>
+        <p className="hint">Demo: demo@soundsphere.test / password123</p>
 
         <div className="divider" />
 
@@ -95,22 +114,30 @@ function LoginPage({ onLogin, onRegister, message, theme, onToggleTheme }) {
           <input
             type="text"
             placeholder="Enter your name"
-            value={form.name}
-            onChange={(event) => updateField("name", event.target.value)}
+            value={registerForm.name}
+            onChange={(event) =>
+              updateRegisterField("name", event.target.value)
+            }
           />
 
           <label>Email</label>
           <input
             type="email"
-            value={form.email}
-            onChange={(event) => updateField("email", event.target.value)}
+            placeholder="Enter your email"
+            value={registerForm.email}
+            onChange={(event) =>
+              updateRegisterField("email", event.target.value)
+            }
           />
 
           <label>Password</label>
           <input
             type="password"
-            value={form.password}
-            onChange={(event) => updateField("password", event.target.value)}
+            placeholder="Create a password"
+            value={registerForm.password}
+            onChange={(event) =>
+              updateRegisterField("password", event.target.value)
+            }
           />
 
           <button type="submit" className="secondary-button">

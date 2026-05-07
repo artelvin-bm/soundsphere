@@ -1,5 +1,25 @@
 const API_BASE_URL = "http://localhost:5000/api";
 
+async function parseResponse(response, endpoint) {
+  const contentType = response.headers.get("content-type") || "";
+
+  if (contentType.includes("application/json")) {
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.message || "Something went wrong.");
+    }
+
+    return data;
+  }
+
+  const text = await response.text();
+
+  throw new Error(
+    `Server returned a non-JSON response. Status: ${response.status}. Endpoint: ${endpoint}`
+  );
+}
+
 async function request(endpoint, options = {}) {
   const response = await fetch(`${API_BASE_URL}${endpoint}`, {
     headers: {
@@ -9,13 +29,7 @@ async function request(endpoint, options = {}) {
     ...options,
   });
 
-  const data = await response.json();
-
-  if (!response.ok) {
-    throw new Error(data.message || "Something went wrong.");
-  }
-
-  return data;
+  return parseResponse(response, endpoint);
 }
 
 export const api = {
@@ -44,6 +58,13 @@ export const api = {
     });
   },
 
+  updateProject(projectId, title, description) {
+    return request(`/projects/${projectId}`, {
+      method: "PUT",
+      body: JSON.stringify({ title, description }),
+    });
+  },
+
   deleteProject(projectId) {
     return request(`/projects/${projectId}`, {
       method: "DELETE",
@@ -58,15 +79,9 @@ export const api = {
     return fetch(`${API_BASE_URL}/projects/${projectId}/files`, {
       method: "POST",
       body: formData,
-    }).then(async (response) => {
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || "Something went wrong.");
-      }
-
-      return data;
-    });
+    }).then((response) =>
+      parseResponse(response, `/projects/${projectId}/files`)
+    );
   },
 
   deleteFile(projectId, fileId) {
@@ -79,6 +94,19 @@ export const api = {
     return request(`/projects/${projectId}/tasks`, {
       method: "POST",
       body: JSON.stringify({ title, assignee }),
+    });
+  },
+
+  deleteTask(projectId, taskId) {
+    return request(`/projects/${projectId}/tasks/${taskId}`, {
+      method: "DELETE",
+    });
+  },
+
+  updateTask(projectId, taskId, title, assignee, status) {
+    return request(`/projects/${projectId}/tasks/${taskId}`, {
+      method: "PUT",
+      body: JSON.stringify({ title, assignee, status }),
     });
   },
 

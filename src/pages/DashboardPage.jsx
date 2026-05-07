@@ -10,6 +10,8 @@ import TaskForm from "../components/TaskForm";
 import TaskList from "../components/TaskList";
 import ConfirmDialog from "../components/ConfirmDialog";
 import { LogOut, Moon, Sun } from "lucide-react";
+import ProjectEditDialog from "../components/ProjectEditDialog";
+import TaskEditDialog from "../components/TaskEditDialog";
 
 function DashboardPage({
     currentUser,
@@ -30,6 +32,9 @@ function DashboardPage({
           confirmText: "Delete",
           onConfirm: null,
         });
+
+  const [editingProject, setEditingProject] = useState(null);
+  const [editingTask, setEditingTask] = useState(null);
 
   async function loadProjects() {
     try {
@@ -201,6 +206,42 @@ function DashboardPage({
     }
   }
 
+  async function deleteTask(taskId) {
+    if (!selectedProject) return;
+
+    try {
+      await api.deleteTask(selectedProject.id, taskId);
+
+      const updatedProjects = projects.map((project) => {
+        if (project.id !== selectedProject.id) return project;
+
+        return {
+          ...project,
+          tasks: project.tasks.filter((task) => task.id !== taskId),
+        };
+      });
+
+      setProjects(updatedProjects);
+      showMessage("Task deleted.");
+    } catch (error) {
+      const updatedProjects = projects.map((project) => {
+        if (project.id !== selectedProject.id) return project;
+
+        return {
+          ...project,
+          tasks: project.tasks.filter((task) => task.id !== taskId),
+        };
+      });
+
+      setProjects(updatedProjects);
+      showMessage(
+        error.message === "Task not found."
+          ? "Task was already removed. The list has been refreshed."
+          : error.message
+      );
+    }
+  }
+
   async function toggleTaskStatus(taskId) {
     try {
       if (!selectedProject) return;
@@ -251,6 +292,75 @@ function DashboardPage({
     });
   }
 
+  function startEditingProject() {
+    if (!selectedProject) return;
+    setEditingProject(selectedProject);
+  }
+
+  function closeProjectEditDialog() {
+    setEditingProject(null);
+  }
+
+  async function saveProjectEdits(updatedValues) {
+    if (!selectedProject) return;
+
+    try {
+      const updatedProject = await api.updateProject(
+        selectedProject.id,
+        updatedValues.title,
+        updatedValues.description
+      );
+
+      const updatedProjects = projects.map((project) => {
+        if (project.id !== selectedProject.id) return project;
+
+        return {
+          ...project,
+          ...updatedProject,
+          files: project.files,
+          tasks: project.tasks,
+        };
+      });
+
+      setProjects(updatedProjects);
+      setEditingProject(null);
+      showMessage("Project updated.");
+    } catch (error) {
+      showMessage(error.message);
+    }
+  }
+
+  async function updateTask(taskId, updatedValues) {
+    if (!selectedProject) return;
+
+    try {
+      const updatedTask = await api.updateTask(
+        selectedProject.id,
+        taskId,
+        updatedValues.title,
+        updatedValues.assignee,
+        updatedValues.status
+      );
+
+      const updatedProjects = projects.map((project) => {
+        if (project.id !== selectedProject.id) return project;
+
+        return {
+          ...project,
+          tasks: project.tasks.map((task) =>
+            task.id === taskId ? updatedTask : task
+          ),
+        };
+      });
+
+      setProjects(updatedProjects);
+      setEditingTask(null);
+      showMessage("Task updated.");
+    } catch (error) {
+      showMessage(error.message);
+    }
+  }
+  
   return (
     <main className="dashboard-page">
       <header className="topbar">
@@ -334,12 +444,19 @@ function DashboardPage({
           ) : (
             <>
               <div className="workspace-header">
-                <div>
-                  <h2>{selectedProject.title}</h2>
-                  <p>
-                    {selectedProject.description || "No description provided."}
-                  </p>
-                </div>
+              <div>
+                <h2>{selectedProject.title}</h2>
+                <p>{selectedProject.description || "No description provided."}</p>
+              </div>
+
+              <div className="inline-actions">
+                <button
+                  type="button"
+                  className="secondary-button"
+                  onClick={startEditingProject}
+                >
+                  Edit Project
+                </button>
 
                 <button
                   className="danger-button"
@@ -356,6 +473,7 @@ function DashboardPage({
                   Delete Project
                 </button>
               </div>
+            </div>
 
               <div className="progress-card">
                 <div className="progress-header">
@@ -400,6 +518,16 @@ function DashboardPage({
                   <TaskList
                     tasks={selectedProject.tasks}
                     onToggleTask={toggleTaskStatus}
+                    onEditTask={(task) => setEditingTask(task)}
+                    onDeleteTask={(taskId) =>
+                      openConfirmDialog({
+                        title: "Delete task?",
+                        message:
+                          "This will permanently delete this task from the project and remove its record from Azure SQL.",
+                        confirmText: "Delete Task",
+                        onConfirm: () => deleteTask(taskId),
+                      })
+                    }
                   />
                 </div>
               </div>
@@ -421,6 +549,20 @@ function DashboardPage({
 
           closeConfirmDialog();
         }}
+      />
+
+      <ProjectEditDialog
+        isOpen={Boolean(editingProject)}
+        project={editingProject}
+        onCancel={closeProjectEditDialog}
+        onSave={saveProjectEdits}
+      />
+
+      <TaskEditDialog
+        isOpen={Boolean(editingTask)}
+        task={editingTask}
+        onCancel={() => setEditingTask(null)}
+        onSave={(updatedValues) => updateTask(editingTask.id, updatedValues)}
       />
     </main>
   );
