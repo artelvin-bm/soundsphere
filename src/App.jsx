@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { loadData, saveData } from "./utils/storage";
+import { hashPassword, loadData, saveData } from "./utils/storage";
 import LoginPage from "./pages/LoginPage";
 import DashboardPage from "./pages/DashboardPage";
 
@@ -23,7 +23,7 @@ function App() {
 
   function handleLogin(email, password) {
     const user = data.users.find(
-      (item) => item.email === email && item.password === password
+      (item) => item.email === email && item.passwordHash === hashPassword(password)
     );
 
     if (!user) {
@@ -52,7 +52,7 @@ function App() {
       id: Date.now(),
       name,
       email,
-      password,
+      passwordHash: hashPassword(password),
     };
 
     const newData = {
