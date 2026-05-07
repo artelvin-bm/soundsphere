@@ -2,85 +2,47 @@
 
 SoundSphere is a web-based music collaboration and production management system. It is designed to help musicians, producers, and collaborators manage music projects, upload audio files, assign tasks, and monitor project progress in one centralized platform.
 
-## Initial Prototype Scope
+## Project Overview
 
-This version is an initial academic software prototype built with React and Vite.
+SoundSphere allows users to create music projects, upload audio files, assign production tasks, and track project progress through a dashboard. The system was developed as an academic software prototype to demonstrate software quality through working functionality, database integration, version control, modular design, input validation, and testing evidence.
 
-The prototype currently supports:
+## Current Prototype Scope
+
+The current prototype supports:
 
 - User registration and login
-- Music project creation and management
-- Audio file upload validation for `.mp3`, `.wav`, and `.flac`
-- Task assignment for collaborators
-- Project dashboard with progress tracking
-- Local prototype database using browser `localStorage`
-- Basic password hashing for stored user credentials
+- Persistent login session
+- Light and dark theme toggle
+- Music project creation, editing, viewing, and deletion
+- Audio file upload, storage, playback, and deletion
+- Task creation, editing, status updating, and deletion
+- Project dashboard with statistics and progress tracking
+- Project search/filtering
+- Custom confirmation dialogs for delete actions
+- Azure SQL Database for structured data storage
+- Azure Blob Storage for audio file storage
+- Node.js and Express backend API
 
 ## Must-Have Feature Coverage
 
 | Must-Have Requirement | Prototype Implementation |
 |---|---|
-| User registration and authentication | Users can register and log in using stored account credentials |
-| Creation and management of music projects | Users can create, view, select, and delete music projects |
-| Audio file upload and storage | Users can upload valid audio file records; invalid file types are rejected |
-| Task assignment for collaborators | Users can create tasks and assign them to collaborators |
-| Project dashboard to monitor project progress | Dashboard shows project count, uploaded files, tasks, and completion percentage |
-| Secure storage of user data and files | Passwords are stored as basic hashes in the prototype; audio uploads are validated |
-| Basic system performance and reliability | Input validation and local persistence are implemented |
-| Database for managing users, projects, and files | Browser `localStorage` is used as a simulated prototype database |
+| User registration and authentication | Users can register and log in through the backend API. Passwords are hashed using bcrypt before being stored. |
+| Creation and management of music projects | Users can create, view, edit, search, select, and delete music projects. |
+| Audio file upload and storage | Users can upload `.mp3`, `.wav`, and `.flac` files. Audio files are stored in Azure Blob Storage. |
+| Task assignment for collaborators | Users can create tasks, assign them to collaborators, edit task details, update task status, and delete tasks. |
+| Project dashboard to monitor project progress | Dashboard displays active projects, uploaded files, total tasks, completed tasks, and project completion percentage. |
+| Secure storage of user data and files | User passwords are hashed with bcrypt. Audio files are stored in Azure Blob Storage, while metadata is stored in Azure SQL Database. |
+| Basic system performance and reliability | The system includes input validation, API error handling, persistent session storage, and confirmation dialogs for destructive actions. |
+| Database for managing users, projects, and files | Azure SQL Database manages users, projects, audio file metadata, and tasks. |
 
-## Software Quality Evidence
-
-This prototype demonstrates software quality through the following:
-
-### Correctness
-
-The implemented features match the defined must-have requirements for the first release. The system allows users to perform the expected core workflows: login, project creation, file upload validation, task assignment, and progress tracking.
-
-### Reliability
-
-The application includes basic input validation. For example, project titles are required, passwords must meet a minimum length, and only accepted audio file formats are allowed.
-
-### Usability
-
-The interface is organized into clear sections: login, dashboard statistics, project list, audio files, and tasks. This makes the system easier to understand and use.
-
-### Maintainability
-
-The project uses a modular file structure. Pages, components, utilities, data, and styles are separated into different folders so that the system can be updated more easily.
-
-### Security
-
-The prototype includes basic password hashing for stored user credentials. Since this is an initial frontend prototype, production-level authentication and backend security are planned for future development.
-
-### Testability
-
-The system can be tested through manual test cases for login, registration, project creation, audio upload validation, task creation, and progress tracking.
-
-## Tech Stack
-
-- React
-- Vite
-- JavaScript
-- CSS
-- localStorage
-- Git and GitHub
-
-## Project Structure
+## System Architecture
 
 ```txt
-soundsphere/
-├── public/
-├── src/
-│   ├── assets/
-│   ├── components/
-│   ├── data/
-│   ├── pages/
-│   ├── styles/
-│   ├── utils/
-│   ├── App.jsx
-│   └── main.jsx
-├── index.html
-├── package.json
-├── README.md
-└── vite.config.js
+React + Vite Frontend
+        ↓
+Node.js + Express Backend API
+        ↓
+Azure SQL Database
+        ↓
+Azure Blob Storage
