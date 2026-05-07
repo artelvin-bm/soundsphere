@@ -36,7 +36,11 @@ function FileList({ files, onDeleteFile }) {
               <audio
                 className="audio-player"
                 controls
-                src={`http://localhost:5000${file.audioUrl}`}
+                src={
+                  file.audioUrl?.startsWith("http")
+                    ? file.audioUrl
+                    : `${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}${file.audioUrl?.replace("/api", "")}`
+                }
               >
                 Your browser does not support the audio element.
               </audio>
