@@ -120,6 +120,41 @@ app.post("/api/auth/login", async (req, res) => {
   }
 });
 
+app.get("/api/users/search", async (req, res) => {
+  try {
+    const query = (req.query.query || "").trim();
+    const currentUserId = Number(req.query.currentUserId);
+
+    if (!query) {
+      return res.json([]);
+    }
+
+    const pool = await getPool();
+
+    const result = await pool
+      .request()
+      .input("query", sql.NVarChar, `%${query}%`)
+      .input("currentUserId", sql.Int, currentUserId || 0)
+      .query(`
+        SELECT TOP 10 id, name, email
+        FROM Users
+        WHERE 
+          id <> @currentUserId
+          AND (
+            name LIKE @query
+            OR email LIKE @query
+          )
+        ORDER BY name ASC
+      `);
+
+    res.json(result.recordset);
+  } catch (error) {
+    res.status(500).json({
+      message: error.message,
+    });
+  }
+});
+
 app.get("/api/projects", async (req, res) => {
   try {
     const ownerId = Number(req.query.ownerId);
@@ -136,10 +171,25 @@ app.get("/api/projects", async (req, res) => {
       .request()
       .input("ownerId", sql.Int, ownerId)
       .query(`
-        SELECT id, owner_id AS ownerId, title, description, status
-        FROM Projects
-        WHERE owner_id = @ownerId
-        ORDER BY created_at DESC
+        SELECT DISTINCT
+          p.id,
+          p.owner_id AS ownerId,
+          owner.name AS ownerName,
+          owner.email AS ownerEmail,
+          p.title,
+          p.description,
+          p.status,
+          CASE 
+            WHEN p.owner_id = @ownerId THEN 'Owner'
+            ELSE 'Collaborator'
+          END AS userRole
+        FROM Projects p
+        INNER JOIN Users owner
+          ON p.owner_id = owner.id
+        LEFT JOIN ProjectCollaborators pc
+          ON p.id = pc.project_id
+        WHERE p.owner_id = @ownerId OR pc.user_id = @ownerId
+        ORDER BY p.id DESC
       `);
 
     const projects = [];
@@ -221,6 +271,149 @@ app.post("/api/projects", async (req, res) => {
       ...result.recordset[0],
       files: [],
       tasks: [],
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: error.message,
+    });
+  }
+});
+
+app.get("/api/projects/:projectId/collaborators", async (req, res) => {
+  try {
+    const projectId = Number(req.params.projectId);
+    const pool = await getPool();
+
+    const result = await pool
+      .request()
+      .input("projectId", sql.Int, projectId)
+      .query(`
+        SELECT 
+          pc.id,
+          pc.project_id AS projectId,
+          pc.user_id AS userId,
+          pc.role,
+          u.name,
+          u.email
+        FROM ProjectCollaborators pc
+        INNER JOIN Users u
+          ON pc.user_id = u.id
+        WHERE pc.project_id = @projectId
+        ORDER BY u.name ASC
+      `);
+
+    res.json(result.recordset);
+  } catch (error) {
+    res.status(500).json({
+      message: error.message,
+    });
+  }
+});
+
+app.post("/api/projects/:projectId/collaborators", async (req, res) => {
+  try {
+    const projectId = Number(req.params.projectId);
+    const { userId } = req.body;
+
+    if (!userId) {
+      return res.status(400).json({
+        message: "User ID is required.",
+      });
+    }
+
+    const pool = await getPool();
+
+    const projectResult = await pool
+      .request()
+      .input("projectId", sql.Int, projectId)
+      .query(`
+        SELECT owner_id AS ownerId
+        FROM Projects
+        WHERE id = @projectId
+      `);
+
+    const project = projectResult.recordset[0];
+
+    if (!project) {
+      return res.status(404).json({
+        message: "Project not found.",
+      });
+    }
+
+    if (project.ownerId === Number(userId)) {
+      return res.status(400).json({
+        message: "Project owner is already part of this project.",
+      });
+    }
+
+    const result = await pool
+      .request()
+      .input("projectId", sql.Int, projectId)
+      .input("userId", sql.Int, userId)
+      .query(`
+        INSERT INTO ProjectCollaborators (project_id, user_id)
+        OUTPUT 
+          INSERTED.id,
+          INSERTED.project_id AS projectId,
+          INSERTED.user_id AS userId,
+          INSERTED.role
+        VALUES (@projectId, @userId)
+      `);
+
+    const collaboratorResult = await pool
+      .request()
+      .input("userId", sql.Int, userId)
+      .query(`
+        SELECT id AS userId, name, email
+        FROM Users
+        WHERE id = @userId
+      `);
+
+    res.status(201).json({
+      ...result.recordset[0],
+      ...collaboratorResult.recordset[0],
+    });
+  } catch (error) {
+    if (
+      error.message.includes("UQ_ProjectCollaborator") ||
+      error.message.includes("Violation of UNIQUE KEY")
+    ) {
+      return res.status(409).json({
+        message: "User is already a collaborator on this project.",
+      });
+    }
+
+    res.status(500).json({
+      message: error.message,
+    });
+  }
+});
+
+app.delete("/api/projects/:projectId/collaborators/:userId", async (req, res) => {
+  try {
+    const projectId = Number(req.params.projectId);
+    const userId = Number(req.params.userId);
+    const pool = await getPool();
+
+    const result = await pool
+      .request()
+      .input("projectId", sql.Int, projectId)
+      .input("userId", sql.Int, userId)
+      .query(`
+        DELETE FROM ProjectCollaborators
+        OUTPUT DELETED.user_id AS userId
+        WHERE project_id = @projectId AND user_id = @userId
+      `);
+
+    if (result.recordset.length === 0) {
+      return res.status(404).json({
+        message: "Collaborator not found.",
+      });
+    }
+
+    res.json({
+      message: "Collaborator removed.",
+      userId,
     });
   } catch (error) {
     res.status(500).json({

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-function TaskEditDialog({ isOpen, task, onSave, onCancel }) {
+function TaskEditDialog({ isOpen, task, assigneeOptions = [], onSave, onCancel }) {
   const [form, setForm] = useState({
     title: "",
     assignee: "",
@@ -42,14 +42,20 @@ function TaskEditDialog({ isOpen, task, onSave, onCancel }) {
           />
 
           <label>Assignee</label>
-          <input
-            type="text"
+          <select
             value={form.assignee}
             onChange={(event) =>
               setForm({ ...form, assignee: event.target.value })
             }
-            placeholder="Assignee"
-          />
+          >
+            <option value="">Unassigned</option>
+
+            {assigneeOptions.map((user) => (
+              <option key={`${user.role}-${user.id}`} value={user.name}>
+                {user.name} — {user.role}
+              </option>
+            ))}
+          </select>
 
           <label>Status</label>
           <select

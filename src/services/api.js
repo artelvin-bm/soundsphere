@@ -115,4 +115,27 @@ export const api = {
       method: "PATCH",
     });
   },
+
+  searchUsers(query, currentUserId) {
+    return request(
+      `/users/search?query=${encodeURIComponent(query)}&currentUserId=${currentUserId}`
+    );
+  },
+
+  getCollaborators(projectId) {
+    return request(`/projects/${projectId}/collaborators`);
+  },
+
+  addCollaborator(projectId, userId) {
+    return request(`/projects/${projectId}/collaborators`, {
+      method: "POST",
+      body: JSON.stringify({ userId }),
+    });
+  },
+
+  removeCollaborator(projectId, userId) {
+    return request(`/projects/${projectId}/collaborators/${userId}`, {
+      method: "DELETE",
+    });
+  },
 };

@@ -12,6 +12,7 @@ import ConfirmDialog from "../components/ConfirmDialog";
 import { LogOut, Moon, Sun } from "lucide-react";
 import ProjectEditDialog from "../components/ProjectEditDialog";
 import TaskEditDialog from "../components/TaskEditDialog";
+import CollaboratorPanel from "../components/CollaboratorPanel";
 
 function DashboardPage({
     currentUser,
@@ -35,6 +36,7 @@ function DashboardPage({
 
   const [editingProject, setEditingProject] = useState(null);
   const [editingTask, setEditingTask] = useState(null);
+  const [projectCollaborators, setProjectCollaborators] = useState([]);
 
   async function loadProjects() {
     try {
@@ -64,6 +66,23 @@ function DashboardPage({
       .toLowerCase()
       .includes(projectSearch.toLowerCase())
   );
+
+  const assigneeOptions = selectedProject
+    ? [
+        {
+          id: selectedProject.ownerId,
+          name: selectedProject.ownerName || currentUser.name,
+          email: selectedProject.ownerEmail || currentUser.email,
+          role: "Owner",
+        },
+        ...projectCollaborators.map((collaborator) => ({
+          id: collaborator.userId,
+          name: collaborator.name,
+          email: collaborator.email,
+          role: collaborator.role,
+        })),
+      ]
+    : [];
 
   const stats = useMemo(() => {
     const fileCount = projects.reduce(
@@ -97,11 +116,18 @@ function DashboardPage({
         return;
       }
 
-      const newProject = await api.createProject(
+      const createdProject = await api.createProject(
         currentUser.id,
         title,
         description
       );
+
+      const newProject = {
+        ...createdProject,
+        ownerName: currentUser.name,
+        ownerEmail: currentUser.email,
+        userRole: "Owner",
+      };
 
       setProjects([newProject, ...projects]);
       setSelectedProjectId(newProject.id);
@@ -360,6 +386,25 @@ function DashboardPage({
       showMessage(error.message);
     }
   }
+
+  async function loadProjectCollaborators(projectId) {
+    if (!projectId) return;
+
+    try {
+      const collaborators = await api.getCollaborators(projectId);
+      setProjectCollaborators(collaborators);
+    } catch (error) {
+      showMessage(error.message);
+    }
+  }
+
+  useEffect(() => {
+    if (selectedProject?.id) {
+      loadProjectCollaborators(selectedProject.id);
+    } else {
+      setProjectCollaborators([]);
+    }
+  }, [selectedProject?.id]);
   
   return (
     <main className="dashboard-page">
@@ -513,7 +558,10 @@ function DashboardPage({
                 <div className="card">
                   <h2>Tasks</h2>
 
-                  <TaskForm onAddTask={addTask} />
+                  <TaskForm
+                    onAddTask={addTask}
+                    assigneeOptions={assigneeOptions}
+                  />
 
                   <TaskList
                     tasks={selectedProject.tasks}
@@ -530,6 +578,15 @@ function DashboardPage({
                     }
                   />
                 </div>
+              </div>
+              <div className="collaboration-section">
+                <CollaboratorPanel
+                  project={selectedProject}
+                  currentUser={currentUser}
+                  showMessage={showMessage}
+                  openConfirmDialog={openConfirmDialog}
+                  onCollaboratorsChange={() => loadProjectCollaborators(selectedProject.id)}
+                />
               </div>
             </>
           )}
@@ -561,6 +618,7 @@ function DashboardPage({
       <TaskEditDialog
         isOpen={Boolean(editingTask)}
         task={editingTask}
+        assigneeOptions={assigneeOptions}
         onCancel={() => setEditingTask(null)}
         onSave={(updatedValues) => updateTask(editingTask.id, updatedValues)}
       />
