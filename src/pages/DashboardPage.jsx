@@ -120,6 +120,34 @@ function DashboardPage({
     }
   }
 
+  async function deleteAudioFile(fileId) {
+    if (!selectedProject) return;
+
+    const confirmed = window.confirm(
+      "Delete this audio file? This will remove the file from Azure Blob Storage and its record from Azure SQL."
+    );
+
+    if (!confirmed) return;
+
+    try {
+      await api.deleteFile(selectedProject.id, fileId);
+
+      const updatedProjects = projects.map((project) => {
+        if (project.id !== selectedProject.id) return project;
+
+        return {
+          ...project,
+          files: project.files.filter((file) => file.id !== fileId),
+        };
+      });
+
+      setProjects(updatedProjects);
+      showMessage("Audio file deleted.");
+    } catch (error) {
+      showMessage(error.message);
+    }
+  }
+
   async function uploadAudioFile(file) {
     try {
       if (!selectedProject || !file) return;
@@ -134,14 +162,8 @@ function DashboardPage({
         return;
       }
 
-      const fileRecord = {
-        name: file.name,
-        label: `Version ${selectedProject.files.length + 1}`,
-        size: `${(file.size / 1024 / 1024).toFixed(2)} MB`,
-        type: file.type || "audio file",
-      };
-
-      const savedFile = await api.addFile(selectedProject.id, fileRecord);
+      const label = `Version ${selectedProject.files.length + 1}`;
+      const savedFile = await api.addFile(selectedProject.id, file, label);
 
       const updatedProjects = projects.map((project) => {
         if (project.id !== selectedProject.id) return project;
@@ -327,7 +349,10 @@ function DashboardPage({
                     <FileUpload onUpload={uploadAudioFile} />
                   </div>
 
-                  <FileList files={selectedProject.files} />
+                  <FileList
+                      files={selectedProject.files}
+                      onDeleteFile={deleteAudioFile}
+                  />
                 </div>
 
                 <div className="card">

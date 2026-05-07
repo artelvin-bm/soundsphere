@@ -968,3 +968,33 @@ body {
     right: 12px;
   }
 }
+
+.file-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.small-danger-button {
+  border: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  background: rgba(252, 145, 134, 0.18);
+  color: #9f2f28;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.small-danger-button:hover {
+  transform: translateY(-1px);
+  background: rgba(252, 145, 134, 0.28);
+}
+
+:root[data-theme="dark"] .small-danger-button {
+  background: rgba(252, 145, 134, 0.16);
+  color: #ffb2aa;
+}

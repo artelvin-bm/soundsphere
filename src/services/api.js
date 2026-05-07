@@ -50,10 +50,28 @@ export const api = {
     });
   },
 
-  addFile(projectId, file) {
-    return request(`/projects/${projectId}/files`, {
+  addFile(projectId, file, label) {
+    const formData = new FormData();
+    formData.append("audio", file);
+    formData.append("label", label);
+
+    return fetch(`${API_BASE_URL}/projects/${projectId}/files`, {
       method: "POST",
-      body: JSON.stringify(file),
+      body: formData,
+    }).then(async (response) => {
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Something went wrong.");
+      }
+
+      return data;
+    });
+  },
+
+  deleteFile(projectId, fileId) {
+    return request(`/projects/${projectId}/files/${fileId}`, {
+      method: "DELETE",
     });
   },
 

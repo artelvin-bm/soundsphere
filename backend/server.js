@@ -3,7 +3,21 @@ import cors from "cors";
 import bcrypt from "bcryptjs";
 import { getPool, sql } from "./db.js";
 
+import multer from "multer";
+import {
+  uploadAudioToBlob,
+  streamAudioFromBlob,
+  deleteAudioFromBlob,
+} from "./blobStorage.js";
+
 const app = express();
+
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 50 * 1024 * 1024,
+  },
+});
 
 app.use(cors());
 app.use(express.json());
@@ -132,20 +146,23 @@ app.get("/api/projects", async (req, res) => {
 
     for (const project of projectsResult.recordset) {
       const filesResult = await pool
-        .request()
-        .input("projectId", sql.Int, project.id)
-        .query(`
-          SELECT 
-            id,
-            name,
-            label,
-            size_text AS size,
-            file_type AS type,
-            CONVERT(varchar, upload_date, 23) AS date
-          FROM AudioFiles
-          WHERE project_id = @projectId
-          ORDER BY upload_date DESC
-        `);
+      .request()
+      .input("projectId", sql.Int, project.id)
+      .query(`
+        SELECT 
+          id,
+          name,
+          label,
+          size_text AS size,
+          file_type AS type,
+          blob_name AS blobName,
+          blob_url AS blobUrl,
+          CONCAT('/api/files/', id, '/stream') AS audioUrl,
+          CONVERT(varchar, upload_date, 23) AS date
+        FROM AudioFiles
+        WHERE project_id = @projectId
+        ORDER BY upload_date DESC
+      `);
 
       const tasksResult = await pool
         .request()
@@ -235,20 +252,21 @@ app.delete("/api/projects/:id", async (req, res) => {
   }
 });
 
-app.post("/api/projects/:id/files", async (req, res) => {
+app.post("/api/projects/:id/files", upload.single("audio"), async (req, res) => {
   try {
     const projectId = Number(req.params.id);
-    const { name, label, size, type } = req.body;
+    const file = req.file;
+    const { label } = req.body;
 
-    if (!name) {
+    if (!file) {
       return res.status(400).json({
-        message: "File name is required.",
+        message: "Audio file is required.",
       });
     }
 
     const allowedExtensions = [".mp3", ".wav", ".flac"];
     const isAllowed = allowedExtensions.some((extension) =>
-      name.toLowerCase().endsWith(extension)
+      file.originalname.toLowerCase().endsWith(extension)
     );
 
     if (!isAllowed) {
@@ -257,28 +275,129 @@ app.post("/api/projects/:id/files", async (req, res) => {
       });
     }
 
+    const { blobName, blobUrl } = await uploadAudioToBlob(file);
+
+    const sizeText = `${(file.size / 1024 / 1024).toFixed(2)} MB`;
+
     const pool = await getPool();
 
     const result = await pool
       .request()
       .input("projectId", sql.Int, projectId)
-      .input("name", sql.NVarChar, name)
-      .input("label", sql.NVarChar, label)
-      .input("size", sql.NVarChar, size)
-      .input("type", sql.NVarChar, type)
+      .input("name", sql.NVarChar, file.originalname)
+      .input("label", sql.NVarChar, label || "Audio Version")
+      .input("size", sql.NVarChar, sizeText)
+      .input("type", sql.NVarChar, file.mimetype)
+      .input("blobName", sql.NVarChar, blobName)
+      .input("blobUrl", sql.NVarChar, blobUrl)
       .query(`
-        INSERT INTO AudioFiles (project_id, name, label, size_text, file_type)
+        INSERT INTO AudioFiles (
+          project_id,
+          name,
+          label,
+          size_text,
+          file_type,
+          blob_name,
+          blob_url
+        )
         OUTPUT 
           INSERTED.id,
           INSERTED.name,
           INSERTED.label,
           INSERTED.size_text AS size,
           INSERTED.file_type AS type,
+          INSERTED.blob_name AS blobName,
+          INSERTED.blob_url AS blobUrl,
           CONVERT(varchar, INSERTED.upload_date, 23) AS date
-        VALUES (@projectId, @name, @label, @size, @type)
+        VALUES (
+          @projectId,
+          @name,
+          @label,
+          @size,
+          @type,
+          @blobName,
+          @blobUrl
+        )
       `);
 
-    res.status(201).json(result.recordset[0]);
+    res.status(201).json({
+      ...result.recordset[0],
+      audioUrl: `/api/files/${result.recordset[0].id}/stream`,
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: error.message,
+    });
+  }
+});
+
+app.get("/api/files/:id/stream", async (req, res) => {
+  try {
+    const fileId = Number(req.params.id);
+    const pool = await getPool();
+
+    const result = await pool
+      .request()
+      .input("fileId", sql.Int, fileId)
+      .query(`
+        SELECT blob_name AS blobName, file_type AS fileType
+        FROM AudioFiles
+        WHERE id = @fileId
+      `);
+
+    const file = result.recordset[0];
+
+    if (!file || !file.blobName) {
+      return res.status(404).json({
+        message: "Audio file not found.",
+      });
+    }
+
+    res.setHeader("Content-Type", file.fileType || "audio/mpeg");
+
+    await streamAudioFromBlob(file.blobName, res);
+  } catch (error) {
+    res.status(500).json({
+      message: error.message,
+    });
+  }
+});
+
+app.delete("/api/projects/:projectId/files/:fileId", async (req, res) => {
+  try {
+    const fileId = Number(req.params.fileId);
+    const pool = await getPool();
+
+    const fileResult = await pool
+      .request()
+      .input("fileId", sql.Int, fileId)
+      .query(`
+        SELECT blob_name AS blobName
+        FROM AudioFiles
+        WHERE id = @fileId
+      `);
+
+    const file = fileResult.recordset[0];
+
+    if (!file) {
+      return res.status(404).json({
+        message: "Audio file record not found.",
+      });
+    }
+
+    await deleteAudioFromBlob(file.blobName);
+
+    await pool
+      .request()
+      .input("fileId", sql.Int, fileId)
+      .query(`
+        DELETE FROM AudioFiles
+        WHERE id = @fileId
+      `);
+
+    res.json({
+      message: "Audio file deleted.",
+    });
   } catch (error) {
     res.status(500).json({
       message: error.message,
