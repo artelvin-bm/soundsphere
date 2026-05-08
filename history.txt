@@ -1,0 +1,19 @@
+commit 776454a5dbc05b8dad2fcb2541b86e101c587c7a
+Author: artelvin-bm <artelvin.dev@gmail.com>
+Date:   Fri May 8 00:02:36 2026 +0800
+
+    Add initial README for SoundSphere project
+    
+    This README provides an overview of the SoundSphere project, including its features, tech stack, and software quality evidence.
+
+commit ed433d5756be011b41c5082aa4ec298a85ab997e
+Author: artelvin-bm <artelvin.dev@gmail.com>
+Date:   Fri May 8 00:00:49 2026 +0800
+
+    Improve prototype authentication storage
+
+commit 5accc37015684e2e8f29b718c14bec8c9a9b318c
+Author: artelvin-bm <artelvin.dev@gmail.com>
+Date:   Thu May 7 23:54:28 2026 +0800
+
+    Initial SoundSphere React prototype
