@@ -1,0 +1,31 @@
+commit 0c67b50b0ba4943f8a7341bacc47cd98170e9999
+Author: artelvin-bm <artelvin.dev@gmail.com>
+Date:   Fri May 8 00:50:18 2026 +0800
+
+    Connect React frontend to Azure SQL backend
+
+commit 11a174ba0a2d70f2f6211d159f4e782f52e9d3ba
+Author: artelvin-bm <artelvin.dev@gmail.com>
+Date:   Fri May 8 00:43:17 2026 +0800
+
+    Add Azure SQL backend API
+
+commit 776454a5dbc05b8dad2fcb2541b86e101c587c7a
+Author: artelvin-bm <artelvin.dev@gmail.com>
+Date:   Fri May 8 00:02:36 2026 +0800
+
+    Add initial README for SoundSphere project
+    
+    This README provides an overview of the SoundSphere project, including its features, tech stack, and software quality evidence.
+
+commit ed433d5756be011b41c5082aa4ec298a85ab997e
+Author: artelvin-bm <artelvin.dev@gmail.com>
+Date:   Fri May 8 00:00:49 2026 +0800
+
+    Improve prototype authentication storage
+
+commit 5accc37015684e2e8f29b718c14bec8c9a9b318c
+Author: artelvin-bm <artelvin.dev@gmail.com>
+Date:   Thu May 7 23:54:28 2026 +0800
+
+    Initial SoundSphere React prototype
