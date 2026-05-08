@@ -1,0 +1,134 @@
+commit 7400ed5f4ce430c4791faafc6eb038a6be3d5688
+Author: artelvin-bm <artelvin.dev@gmail.com>
+Date:   Fri May 8 06:01:14 2026 +0800
+
+    Add live search suggestions
+
+commit 012206e86e93cafbcfad64d7e342c2f90516e07c
+Author: artelvin-bm <artelvin.dev@gmail.com>
+Date:   Fri May 8 05:11:51 2026 +0800
+
+    Use deployed API URL for audio playback
+
+commit 938b7c1a4a677282d3a68698e396369dd4c1bb60
+Author: artelvin-bm <artelvin.dev@gmail.com>
+Date:   Fri May 8 05:05:26 2026 +0800
+
+    Configure Azure Static Web Apps API URL
+
+commit 1de27dd2424d2028e690f026c963cb7a2a979a83
+Author: artelvin-bm <artelvin.dev@gmail.com>
+Date:   Fri May 8 05:00:08 2026 +0800
+
+    Remove node modules from version control
+
+commit 6e41953c81b333aa13438527d4af6650b22f3623
+Author: artelvin-bm <artelvin.dev@gmail.com>
+Date:   Fri May 8 04:54:58 2026 +0800
+
+    ci: add Azure Static Web Apps workflow file
+    on-behalf-of: @Azure opensource@microsoft.com
+
+commit 0818adef73b8fb792ef906cd1b0db5cea39a74c3
+Author: artelvin-bm <artelvin.dev@gmail.com>
+Date:   Fri May 8 04:48:59 2026 +0800
+
+    Add root health response for deployed API
+
+commit b0a0c4d31a1a3bc0a4b5dcd3b6d0d31904388db4
+Author: artelvin-bm <artelvin.dev@gmail.com>
+Date:   Fri May 8 04:44:25 2026 +0800
+
+    Fix Azure backend deployment workflow
+
+commit 134d43a23b48c58702a5fce5663bc05a412f0f76
+Author: artelvin-bm <artelvin.dev@gmail.com>
+Date:   Fri May 8 04:39:33 2026 +0800
+
+    Add or update the Azure App Service build and deployment workflow config
+
+commit 2be82d5fa3af2063c55c133883a39940d03c5ece
+Author: artelvin-bm <artelvin.dev@gmail.com>
+Date:   Fri May 8 04:21:40 2026 +0800
+
+    Add project collaboration and collaborator-based task assignment
+
+commit bb137e020b2d804b28254ffb958af88c5bee8b02
+Author: artelvin-bm <artelvin.dev@gmail.com>
+Date:   Fri May 8 03:47:45 2026 +0800
+
+    Update README with Azure full-stack architecture
+
+commit f649d06f3d1af9a063fe901f1b5589b217328a18
+Author: artelvin-bm <artelvin.dev@gmail.com>
+Date:   Fri May 8 03:45:15 2026 +0800
+
+    Add task deletion and improve API error handling
+
+commit 6a3697b3853966cd1dec7e2cdcad623b92e04ba1
+Author: artelvin-bm <artelvin.dev@gmail.com>
+Date:   Fri May 8 02:49:19 2026 +0800
+
+    Improve SoundSphere UI and branding
+
+commit fa82878ca61fbc3868874c4473a49c191066de6c
+Author: artelvin-bm <artelvin.dev@gmail.com>
+Date:   Fri May 8 02:46:27 2026 +0800
+
+    Persist login session and theme preference
+
+commit 61da80aad0b94fb72bcb0e094299199f8e8b53f5
+Author: artelvin-bm <artelvin.dev@gmail.com>
+Date:   Fri May 8 02:43:33 2026 +0800
+
+    Improve theme toggle with mode icons
+
+commit c39eaf8fd9f9b452e52b72b028aedc2165d784d4
+Author: artelvin-bm <artelvin.dev@gmail.com>
+Date:   Fri May 8 02:38:26 2026 +0800
+
+    Add custom confirmation dialogs for delete actions
+
+commit d6525a6e310265c0e7925117c5208913a2247c62
+Author: artelvin-bm <artelvin.dev@gmail.com>
+Date:   Fri May 8 02:28:58 2026 +0800
+
+    Add Azure Blob Storage audio uploads, playback, file deletion
+
+commit 669b6d4f776d89c2f0d0171fb9cfcb1d238f07a6
+Author: artelvin-bm <artelvin.dev@gmail.com>
+Date:   Fri May 8 02:03:43 2026 +0800
+
+    Improve SoundSphere UI and add theme toggle
+
+commit 0c67b50b0ba4943f8a7341bacc47cd98170e9999
+Author: artelvin-bm <artelvin.dev@gmail.com>
+Date:   Fri May 8 00:50:18 2026 +0800
+
+    Connect React frontend to Azure SQL backend
+
+commit 11a174ba0a2d70f2f6211d159f4e782f52e9d3ba
+Author: artelvin-bm <artelvin.dev@gmail.com>
+Date:   Fri May 8 00:43:17 2026 +0800
+
+    Add Azure SQL backend API
+
+commit 776454a5dbc05b8dad2fcb2541b86e101c587c7a
+Author: artelvin-bm <artelvin.dev@gmail.com>
+Date:   Fri May 8 00:02:36 2026 +0800
+
+    Add initial README for SoundSphere project
+    
+    This README provides an overview of the SoundSphere project, including its features, tech stack, and software quality evidence.
+
+commit ed433d5756be011b41c5082aa4ec298a85ab997e
+Author: artelvin-bm <artelvin.dev@gmail.com>
+Date:   Fri May 8 00:00:49 2026 +0800
+
+    Improve prototype authentication storage
+
+commit 5accc37015684e2e8f29b718c14bec8c9a9b318c
+Author: artelvin-bm <artelvin.dev@gmail.com>
+Date:   Thu May 7 23:54:28 2026 +0800
+
+    Initial SoundSphere React prototype
